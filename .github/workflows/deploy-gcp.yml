@@ -3,6 +3,7 @@ name: Deploy to GCP
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -25,6 +26,7 @@ jobs:
         with:
           workload-identity-provider: projects/871583157548/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service-account: github-cicd@alphalead-ai.iam.gserviceaccount.com
+          project-id: alphalead-ai
 
       - uses: google-github-actions/setup-gcloud@v2
 
