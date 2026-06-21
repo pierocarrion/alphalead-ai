@@ -131,7 +131,7 @@ function App() {
           ) : (
             <ChromeWindow width={1200} height={744} url="alphateam-ai.team/acme/q3-launch"
               tabs={[{ title: 'AlphaTeam — q3-launch' }, { title: 'Acme Deck Hub' }]} activeIndex={0}>
-              <WebApp tone={tone} convo={convo} onShowTask={showTask} />
+              <WebApp tone={tone} convo={convo} onShowTask={showTask} onStart={() => ritualWith(DECK_TASK)} onReplayWelcome={() => { setFlow(null); setMode('app'); setPhase('welcome'); }} />
             </ChromeWindow>
           )}
         </div>
