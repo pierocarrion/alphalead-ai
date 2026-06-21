@@ -40,6 +40,37 @@ export function shouldUseFallback(): boolean {
   return GEMINI_FALLBACK;
 }
 
+const FRIENDLY_GEMINI_QUOTA = "We're hitting our AI limit right now. Please try again in a moment.";
+const FRIENDLY_GEMINI_UNAVAILABLE = "Our AI service isn't reachable right now. Please try again in a moment.";
+const FRIENDLY_GEMINI_DEFAULT = "We couldn't process that with AI right now. Please try again in a moment.";
+const FRIENDLY_GEMINI_PARSE = "Our AI returned something we couldn't read. Please try again.";
+const FRIENDLY_GEMINI_EMPTY = "Our AI didn't respond. Please try again.";
+const FRIENDLY_GEMINI_DISABLED = "AI features aren't enabled right now.";
+
+export function toFriendlyGeminiError(error: string | undefined): string {
+  if (!error) return FRIENDLY_GEMINI_DEFAULT;
+  const lower = error.toLowerCase();
+  if (lower.includes("quota") || lower.includes("rate_limit") || lower.includes("resource_exhausted") || lower.includes("429")) {
+    return FRIENDLY_GEMINI_QUOTA;
+  }
+  if (lower.includes("permission_denied") || lower.includes("unauthenticated") || lower.includes("401") || lower.includes("403")) {
+    return FRIENDLY_GEMINI_UNAVAILABLE;
+  }
+  if (lower.includes("not enabled") || lower.includes("misconfigured")) {
+    return FRIENDLY_GEMINI_DISABLED;
+  }
+  if (lower.includes("json parse error") || lower.includes("unexpected token")) {
+    return FRIENDLY_GEMINI_PARSE;
+  }
+  if (lower.includes("empty response")) {
+    return FRIENDLY_GEMINI_EMPTY;
+  }
+  if (lower.includes("unavailable") || lower.includes("timeout") || lower.includes("deadline") || lower.includes("503") || lower.includes("500")) {
+    return FRIENDLY_GEMINI_UNAVAILABLE;
+  }
+  return FRIENDLY_GEMINI_DEFAULT;
+}
+
 export interface GeminiResponse<T> {
   ok: boolean;
   data?: T;

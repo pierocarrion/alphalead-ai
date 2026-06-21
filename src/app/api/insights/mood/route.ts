@@ -92,7 +92,7 @@ export async function POST(request: Request) {
           signals: [],
           usedGemini: false,
           messageCount: messages.length,
-          error: gemini.error,
+          error: "We couldn't read the room right now. Showing a neutral mood.",
         },
         { status: 200 }
       );
