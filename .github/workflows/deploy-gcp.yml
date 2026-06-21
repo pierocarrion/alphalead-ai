@@ -24,9 +24,9 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload-identity-provider: projects/871583157548/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-          service-account: github-cicd@alphalead-ai.iam.gserviceaccount.com
-          project-id: alphalead-ai
+          workload_identity_provider: projects/871583157548/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-cicd@alphalead-ai.iam.gserviceaccount.com
+          project_id: alphalead-ai
 
       - uses: google-github-actions/setup-gcloud@v2
 
