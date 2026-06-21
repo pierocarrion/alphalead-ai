@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button, Icon, Mira, Overlay, TopBar, Avatar } from "@/shared/ui";
+import { fetchJson } from "@/shared/lib/api";
 
 interface TaskConfirmClientProps {
   task: {
@@ -22,8 +24,12 @@ export function TaskConfirmClient({ task, warm }: TaskConfirmClientProps) {
   const router = useRouter();
 
   const handleDiscard = async () => {
-    await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
-    router.push("/chat");
+    try {
+      await fetchJson(`/api/tasks/${task.id}`, { method: "DELETE" });
+      router.push("/chat");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "We couldn't remove that task. Please try again.");
+    }
   };
 
   const handleStart = () => {

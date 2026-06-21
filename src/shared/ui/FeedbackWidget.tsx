@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "./Button";
+import { fetchJson } from "@/shared/lib/api";
 
 interface FeedbackWidgetProps {
   onSubmitted?: () => void;
@@ -11,22 +12,24 @@ export function FeedbackWidget({ onSubmitted }: FeedbackWidgetProps) {
   const [type, setType] = useState<"win" | "struggle" | "testimonial" | "metric">("win");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const submit = async () => {
     if (!content.trim()) return;
     setStatus("submitting");
+    setErrorMessage("");
     try {
-      const res = await fetch("/api/feedback", {
+      await fetchJson("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, content, tags: ["onboarding"] }),
       });
-      if (!res.ok) throw new Error("Failed");
       setStatus("done");
       setContent("");
       onSubmitted?.();
-    } catch {
+    } catch (err) {
       setStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
   };
 
@@ -55,7 +58,11 @@ export function FeedbackWidget({ onSubmitted }: FeedbackWidgetProps) {
       />
       <div className="mt-3 flex items-center justify-between">
         <span className="text-xs text-ink-3">
-          {status === "done" ? "Thank you — saved." : status === "error" ? "Try again." : ""}
+          {status === "done"
+            ? "Thank you — saved."
+            : status === "error"
+            ? errorMessage
+            : ""}
         </span>
         <Button size="sm" onClick={submit} disabled={!content.trim() || status === "submitting"}>
           Share

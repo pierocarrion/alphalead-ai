@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button, Icon, Mira, Overlay, Sparkles } from "@/shared/ui";
+import { fetchJson } from "@/shared/lib/api";
 import { FEELINGS } from "@/features/rituals/lib/feelings";
 
 interface RitualClientProps {
@@ -24,27 +26,34 @@ export function RitualClient({ task, warm }: RitualClientProps) {
   const [ritualId, setRitualId] = useState<string | null>(null);
 
   const handleStartFocus = async (selectedFeelingId: string) => {
-    const res = await fetch("/api/rituals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        taskId: task.id,
-        feeling: selectedFeelingId,
-        durationSec: 120,
-      }),
-    });
-    const data = await res.json();
-    setRitualId(data.ritual.id);
-    setStep("focus");
+    try {
+      const data = await fetchJson<{ ritual: { id: string } }>("/api/rituals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId: task.id,
+          feeling: selectedFeelingId,
+          durationSec: 120,
+        }),
+      });
+      setRitualId(data.ritual.id);
+      setStep("focus");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "We couldn't start the ritual. Please try again.");
+    }
   };
 
   const handleComplete = async () => {
     if (ritualId) {
-      await fetch(`/api/rituals/${ritualId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: true }),
-      });
+      try {
+        await fetchJson(`/api/rituals/${ritualId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: true }),
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "We couldn't save your progress. Please try again.");
+      }
     }
     setStep("reward");
   };

@@ -44,7 +44,7 @@ describe("useChannel", () => {
 
     expect(result.current.channel?.name).toBe("q3-launch");
     expect(result.current.messages).toHaveLength(1);
-    expect(global.fetch).toHaveBeenCalledWith("/api/channels/channel-1/messages");
+    expect(global.fetch).toHaveBeenCalledWith("/api/channels/channel-1/messages", undefined);
   });
 
   it("sends a message and updates the cache", async () => {

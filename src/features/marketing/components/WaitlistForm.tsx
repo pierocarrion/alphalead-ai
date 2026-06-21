@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/shared/ui";
+import { fetchJson, ApiError } from "@/shared/lib/api";
 
 export function WaitlistForm({ buttonText = "Join the waitlist" }: { buttonText?: string }) {
   const [email, setEmail] = useState("");
@@ -17,19 +18,21 @@ export function WaitlistForm({ buttonText = "Join the waitlist" }: { buttonText?
     setError("");
 
     try {
-      const res = await fetch("/api/waitlist", {
+      await fetchJson("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role, teamSize }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong");
       setSuccess(true);
       setEmail("");
       setRole("");
       setTeamSize("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to join");
+      const message =
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "We couldn't add you to the list right now.";
+      setError(message);
     } finally {
       setLoading(false);
     }

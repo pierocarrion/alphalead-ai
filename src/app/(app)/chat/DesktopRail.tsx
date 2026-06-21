@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button, Icon, Mira, Weather } from "@/shared/ui";
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
+import { fetchJson } from "@/shared/lib/api";
 
 const DEFAULT_TASK: DetectedTaskDraft = {
   title: "Draft the Q3 launch deck",
@@ -32,16 +34,17 @@ export function DesktopRail({ detected }: DesktopRailProps) {
     tasks.unshift(DEFAULT_TASK);
   }
 
-  const handleStart = (task: DetectedTaskDraft) => {
-    fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ draft: task }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.task?.id) router.push(`/task/${data.task.id}`);
+  const handleStart = async (task: DetectedTaskDraft) => {
+    try {
+      const data = await fetchJson<{ task: { id: string } }>("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft: task }),
       });
+      if (data.task?.id) router.push(`/task/${data.task.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "We couldn't create that task. Please try again.");
+    }
   };
 
   return (

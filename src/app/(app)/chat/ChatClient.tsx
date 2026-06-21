@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { Button, Icon, Mira, TopBar } from "@/shared/ui";
 import { useChannel } from "@/features/chat/application/hooks/useChannel";
 import { ChatMessage } from "@/features/chat/presentation/components/ChatMessage";
@@ -11,6 +12,7 @@ import { DayDivider } from "@/features/chat/presentation/components/DayDivider";
 import { TypingRow } from "@/features/chat/presentation/components/TypingRow";
 import { InterceptCard } from "@/features/chat/presentation/components/InterceptCard";
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
+import { fetchJson } from "@/shared/lib/api";
 import { DesktopRail } from "./DesktopRail";
 
 interface ChatClientProps {
@@ -21,7 +23,7 @@ interface ChatClientProps {
 export function ChatClient({ channelId, channelName }: ChatClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const { messages, isLoading, sendMessage, detected: detectedFromSend, isSending } =
+  const { messages, isLoading, sendMessage, detected: detectedFromSend, isSending, queryError } =
     useChannel(channelId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState("");
@@ -44,9 +46,9 @@ export function ChatClient({ channelId, channelName }: ChatClientProps) {
   }, [messages.length, isSending, detected]);
 
   useEffect(() => {
-    fetch(`/api/channels/${channelId}/messages`)
-      .then((res) => res.json())
-      .then((data) => setDetectedFromApi(data.detected ?? null));
+    fetchJson<{ detected: DetectedTaskDraft | null }>(`/api/channels/${channelId}/messages`)
+      .then((data) => setDetectedFromApi(data.detected ?? null))
+      .catch(() => {});
   }, [channelId]);
 
   const handleSend = () => {
@@ -56,17 +58,18 @@ export function ChatClient({ channelId, channelName }: ChatClientProps) {
     setDismissed(false);
   };
 
-  const handleShowTask = () => {
+  const handleShowTask = async () => {
     if (!detected) return;
-    fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ draft: detected }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        router.push(`/task/${data.task.id}`);
+    try {
+      const data = await fetchJson<{ task: { id: string } }>("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft: detected }),
       });
+      router.push(`/task/${data.task.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "We couldn't create that task. Please try again.");
+    }
   };
 
   const lastMessage = messages[messages.length - 1];
@@ -121,6 +124,11 @@ export function ChatClient({ channelId, channelName }: ChatClientProps) {
         >
           {isLoading ? (
             <div className="py-10 text-center text-ink-3">Loading chat…</div>
+          ) : queryError ? (
+            <div className="py-10 text-center">
+              <p className="text-sm text-red-400">{queryError.message}</p>
+              <p className="mt-1 text-xs text-ink-3">Please refresh to try again.</p>
+            </div>
           ) : (
             <>
               <DayDivider label="Today" />
