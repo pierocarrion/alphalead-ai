@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static design prototypes (JSX loaded via global <script> tags, no imports):
+    "prototype/**",
   ]),
 ]);
 

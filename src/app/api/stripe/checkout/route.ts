@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const returnUrl = body.returnUrl ?? `${process.env.NEXTAUTH_URL}/settings`;
 
   // Upsert Stripe customer for the workspace.
-  let subscription = await prisma.workspaceSubscription.findUnique({
+  const subscription = await prisma.workspaceSubscription.findUnique({
     where: { workspaceId: membership.workspaceId },
   });
 

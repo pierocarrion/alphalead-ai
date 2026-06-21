@@ -51,14 +51,7 @@ export default async function CrewPage() {
     ? {
         title: goal.milestones[0].title,
         due: goal.milestones[0].dueDate
-          ? "In about " +
-            Math.max(
-              1,
-              Math.ceil(
-                (new Date(goal.milestones[0].dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-              )
-            ) +
-            " days"
+          ? formatDaysUntil(goal.milestones[0].dueDate)
           : "Soon",
         contributors: ["maya", "sofia", "theo"] as PersonId[],
       }
@@ -75,4 +68,12 @@ export default async function CrewPage() {
       pair={pair}
     />
   );
+}
+
+function formatDaysUntil(dueDate: Date): string {
+  const days = Math.max(
+    1,
+    Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  );
+  return `In about ${days} days`;
 }
