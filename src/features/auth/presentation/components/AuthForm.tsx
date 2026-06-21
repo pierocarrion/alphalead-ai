@@ -4,6 +4,25 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui";
+import { fetchJson, ApiError } from "@/shared/lib/api";
+
+const NEXTAUTH_ERROR_MAP: Record<string, string> = {
+  CredentialsSignin: "That email or password doesn't match. Try again.",
+  OAuthSignin: "We couldn't start sign-in. Please try again.",
+  OAuthCallback: "We couldn't complete sign-in. Please try again.",
+  OAuthCreateAccount: "We couldn't create your account with that provider. Please try again.",
+  EmailCreateAccount: "We couldn't create your account. Please try again.",
+  Callback: "Something went wrong during sign-in. Please try again.",
+  AccessDenied: "You don't have access. Please contact support if this seems wrong.",
+  Configuration: "Our sign-in service isn't configured correctly. Please contact support.",
+  Verification: "We couldn't verify your sign-in. Please try again.",
+  Default: "We couldn't sign you in right now. Please try again.",
+};
+
+function friendlyNextAuthError(code: string | undefined): string {
+  if (!code) return "We couldn't sign you in right now. Please try again.";
+  return NEXTAUTH_ERROR_MAP[code] ?? "We couldn't sign you in right now. Please try again.";
+}
 
 export function AuthForm() {
   const router = useRouter();
@@ -19,42 +38,45 @@ export function AuthForm() {
     setLoading(true);
     setError("");
 
-    if (mode === "signup") {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+    try {
+      if (mode === "signup") {
+        try {
+          await fetchJson("/api/auth/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password }),
+          });
+        } catch (err) {
+          const message =
+            err instanceof ApiError || err instanceof Error
+              ? err.message
+              : "We couldn't create your account right now. Please try again.";
+          setError(message);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        mode: "login",
+        redirect: false,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(
-          data.error ||
-            "We couldn't create your account right now. Please try again."
-        );
+
+      if (result?.error) {
+        const message = friendlyNextAuthError(result.error);
+        setError(message);
         setLoading(false);
         return;
       }
-    }
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      mode: "login",
-      redirect: false,
-    });
-
-    if (result?.error) {
-      setError(
-        result.error === "CredentialsSignin"
-          ? "That email or password doesn't match. Try again."
-          : result.error
-      );
+      router.push("/onboarding");
+      router.refresh();
+    } catch {
+      setError("We couldn't reach the server. Please check your connection.");
       setLoading(false);
-      return;
     }
-
-    router.push("/onboarding");
-    router.refresh();
   };
 
   return (

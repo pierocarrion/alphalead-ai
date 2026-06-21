@@ -64,12 +64,12 @@ describe("AuthForm", () => {
     expect(push).toHaveBeenCalledWith("/onboarding");
   });
 
-  it("shows error when sign in fails", async () => {
+  it("shows friendly error when sign in fails with CredentialsSignin", async () => {
     vi.mocked(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ user: { id: "1" } }),
     } as Response);
-    vi.mocked(signIn).mockResolvedValueOnce({ ok: false, error: "Invalid credentials" } as never);
+    vi.mocked(signIn).mockResolvedValueOnce({ ok: false, error: "CredentialsSignin" } as never);
 
     render(<AuthForm />);
     fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "Test" } });
@@ -77,6 +77,22 @@ describe("AuthForm", () => {
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
-    await screen.findByText("Invalid credentials");
+    await screen.findByText("That email or password doesn't match. Try again.");
+  });
+
+  it("shows friendly fallback for unknown next-auth error codes", async () => {
+    vi.mocked(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: { id: "1" } }),
+    } as Response);
+    vi.mocked(signIn).mockResolvedValueOnce({ ok: false, error: "SomeUnknownError" } as never);
+
+    render(<AuthForm />);
+    fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "Test" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "test@example.com" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    await screen.findByText("We couldn't sign you in right now. Please try again.");
   });
 });
