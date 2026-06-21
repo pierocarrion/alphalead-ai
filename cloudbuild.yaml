@@ -2,6 +2,11 @@ steps:
   # Run Prisma migrations against Cloud SQL before deploying.
   # This ensures the database schema is up to date so requests don't hit
   # Prisma P2021 ("table does not exist") errors at runtime.
+  #
+  # The DATABASE_URL secret is stored in Cloud Run socket format
+  # (postgresql://user:pass@/db?host=/cloudsql/project:region:instance).
+  # The Cloud SQL proxy exposes the instance on 127.0.0.1:5432, so we
+  # rewrite the URL to point at localhost before running Prisma.
   - name: "node:20-alpine"
     entrypoint: sh
     args:
@@ -14,6 +19,10 @@ steps:
         PROXY_PID=$!
         echo "Waiting for Cloud SQL proxy..."
         sleep 8
+        # Rewrite DATABASE_URL: replace socket-path host with localhost:5432
+        # Handles: postgresql://user:pass@/db?host=/cloudsql/...  ->  ...@localhost:5432/db
+        export DATABASE_URL="$$(echo "$$DATABASE_URL" | sed -E 's|@/|@localhost:5432/|; s|\?host=[^&]*||')"
+        echo "DATABASE_URL host: $$(echo "$$DATABASE_URL" | sed -E 's|.*@([^/:]+).*|\1|')"
         npm ci --ignore-scripts
         npx prisma migrate deploy
         MIGRATE_STATUS=$?
