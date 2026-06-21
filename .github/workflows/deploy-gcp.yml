@@ -46,7 +46,7 @@ jobs:
           fi
           echo "=== Submitting Cloud Build ==="
           OUTPUT=$(gcloud builds submit \
-            --source gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz \
+            gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz \
             --config=cloudbuild.yaml \
             --project=alphalead-ai \
             --substitutions=_VERSION=$GITHUB_SHA 2>&1)
