@@ -30,14 +30,23 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Submit Cloud Build
+      - name: Upload source and submit build
         run: |
           set +e
           gcloud config set project alphalead-ai
-          OUTPUT=$(gcloud builds submit . \
+          echo "=== Creating source tarball ==="
+          tar -czf /tmp/source.tar.gz --exclude=.git --exclude=node_modules .
+          echo "=== Uploading source to GCS ==="
+          gsutil cp /tmp/source.tar.gz gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz
+          if [ $? -ne 0 ]; then
+            echo "::error::GCS upload failed"
+            exit 1
+          fi
+          echo "=== Submitting Cloud Build ==="
+          OUTPUT=$(gcloud builds submit \
+            gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz \
             --config=cloudbuild.yaml \
             --project=alphalead-ai \
-            --gcs-source-staging-dir=gs://alphalead-ai-build-source/source \
             --substitutions=_VERSION=$GITHUB_SHA 2>&1)
           STATUS=$?
           echo "$OUTPUT"
