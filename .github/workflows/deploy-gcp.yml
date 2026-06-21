@@ -37,6 +37,7 @@ jobs:
           OUTPUT=$(gcloud builds submit . \
             --config=cloudbuild.yaml \
             --project=alphalead-ai \
+            --gcs-source-staging-dir=gs://alphalead-ai-build-source/source \
             --substitutions=_VERSION=${{ github.sha }} 2>&1)
           STATUS=$?
           echo "$OUTPUT"
