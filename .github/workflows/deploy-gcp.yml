@@ -32,7 +32,6 @@ jobs:
 
       - name: Submit Cloud Build
         run: |
-          set +e
           gcloud config set project alphalead-ai
           OUTPUT=$(gcloud builds submit . \
             --config=cloudbuild.yaml \
@@ -41,7 +40,7 @@ jobs:
           STATUS=$?
           echo "$OUTPUT"
           if [ $STATUS -ne 0 ]; then
-            MSG=$(echo "$OUTPUT" | tail -20 | tr '\n' ' ' | sed 's/|/ /g')
+            MSG=$(echo "$OUTPUT" | tail -15 | tr '\n' ' ' | sed 's/|/ /g')
             echo "::error::Build submit failed (exit $STATUS): $MSG"
             exit 1
           fi
