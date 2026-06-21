@@ -6,11 +6,37 @@ export const metadata = {
   title: "AlphaTeam AI — Stop team procrastination before it spreads",
   description:
     "AlphaTeam AI is an AI teammate that detects procrastination in team chat, shrinks tasks into 2-minute starts, and gives leaders private insights — without shame.",
+  alternates: { canonical: "/" },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "AlphaTeam AI",
+  applicationCategory: "ProductivityApplication",
+  operatingSystem: "Web",
+  description:
+    "AI teammate that detects procrastination in team chat, shrinks tasks into 2-minute starts, and gives leaders private insights — without shame.",
+  offers: [
+    { "@type": "Offer", price: "0", priceCurrency: "USD", name: "Free" },
+    {
+      "@type": "Offer",
+      price: "15",
+      priceCurrency: "USD",
+      name: "Team",
+      description: "per user / month",
+    },
+  ],
+  publisher: { "@type": "Organization", name: "AlphaTeam AI" },
 };
 
 export default function LandingPage() {
   return (
     <main className="flex min-h-screen flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5 lg:px-12">
         <div className="flex items-center gap-2.5">
