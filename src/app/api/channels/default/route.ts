@@ -26,15 +26,14 @@ export async function GET(request: Request) {
       );
     }
 
-    const workspace = await prisma.workspace.findUnique({
-      where: { slug: "acme" },
+    const workspace = await prisma.workspace.findFirst({
+      where: { memberships: { some: { userId: user.id } } },
       include: {
         channels: { where: { name: "q3-launch" }, take: 1 },
-        memberships: { where: { userId: user.id } },
       },
     });
 
-    if (!workspace || workspace.memberships.length === 0) {
+    if (!workspace) {
       return NextResponse.json(
         { error: "No default channel is set up for you yet." },
         { status: 404 }

@@ -1,19 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Mira, TopBar, Avatar, Weather, Button, Icon, getPerson } from "@/shared/ui";
 import type { PersonId } from "@/shared/ui";
+import { fetchJson } from "@/shared/lib/api";
 
 interface CrewClientProps {
   warm: boolean;
   mood: { value: number; label: string; note: string };
-  loadGuardian: { who: PersonId; title: string; note: string } | null;
+  loadGuardian: { who: PersonId; userId: string; title: string; note: string } | null;
   milestone: { title: string; due: string; contributors: PersonId[] } | null;
-  pair: { who: PersonId; available: boolean };
+  pair: { who: PersonId; userId: string; available: boolean };
 }
 
 export function CrewClient({ warm, mood, loadGuardian, milestone, pair }: CrewClientProps) {
   const [paired, setPaired] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [shared, setShared] = useState(false);
+
+  async function createPairMatch(partnerId: string, reason: string): Promise<boolean> {
+    setSending(true);
+    try {
+      await fetchJson("/api/pair-match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerId, reason }),
+      });
+      return true;
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "We couldn’t start the pair-up. Please try again."
+      );
+      return false;
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -59,12 +84,29 @@ export function CrewClient({ warm, mood, loadGuardian, milestone, pair }: CrewCl
                   <div className="mt-1 text-[16px] font-bold leading-snug text-ink">
                     {loadGuardian.title}
                   </div>
-                  <p className="mt-1.5 text-xs text-ink-3 text-wrap-pretty">{loadGuardian.note}</p>
+                  <p className="mt-1.5 text-xs text-ink-3 text-wrap-pretty">
+                    {warm
+                      ? "They tend to carry this quietly. Want to help lift it with them?"
+                      : loadGuardian.note}
+                  </p>
                 </div>
               </div>
               <div className="mt-3.5 flex gap-2">
-                <Button className="flex-1 text-[14.5px] py-3">Share the load</Button>
-                <Button variant="ghost" className="flex-1 text-[14.5px] py-3">
+                <Button
+                  className="flex-1 text-[14.5px] py-3"
+                  disabled={sending || shared}
+                  onClick={async () => {
+                    if (!loadGuardian) return;
+                    const ok = await createPairMatch(
+                      loadGuardian.userId,
+                      "Share the load: easing the weight together."
+                    );
+                    if (ok) setShared(true);
+                  }}
+                >
+                  {shared ? "Offer sent" : "Share the load"}
+                </Button>
+                <Button variant="ghost" className="flex-1 text-[14.5px] py-3" disabled={sending}>
                   Not now
                 </Button>
               </div>
@@ -117,7 +159,9 @@ export function CrewClient({ warm, mood, loadGuardian, milestone, pair }: CrewCl
                 <div className="text-xs text-ink-3">
                   {paired
                     ? "You’re not doing it alone."
-                    : "Begin the same 2 minutes side by side."}
+                    : warm
+                      ? "Sit beside them for two minutes — it’s gentler together."
+                      : "Begin the same 2 minutes side by side."}
                 </div>
               </div>
               {paired && <Mira size={26} mood="cheer" />}
@@ -125,13 +169,17 @@ export function CrewClient({ warm, mood, loadGuardian, milestone, pair }: CrewCl
             <Button
               className="mt-3.5 w-full text-[14.5px] py-3"
               variant={paired ? "primary" : "ghost"}
-              onClick={() => {
-                if (!paired) {
-                  setPaired(true);
-                }
+              disabled={sending || paired || !pair.userId}
+              onClick={async () => {
+                if (paired || !pair.userId) return;
+                const ok = await createPairMatch(
+                  pair.userId,
+                  "Pair-start: begin the same 2 minutes side by side."
+                );
+                if (ok) setPaired(true);
               }}
             >
-              {paired ? "Starting together…" : "Start together"}
+              {paired ? "Starting together…" : sending ? "Asking…" : "Start together"}
             </Button>
           </div>
         </div>

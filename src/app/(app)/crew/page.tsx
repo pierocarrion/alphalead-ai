@@ -35,6 +35,7 @@ export default async function CrewPage() {
   const loadGuardian = load.heavy
     ? {
         who: personIdFromName(load.heavy.name) as PersonId,
+        userId: load.heavy.userId,
         title: `${load.heavy.name}’s been catching most of the work — ${load.heavy.openCount} open task${load.heavy.openCount === 1 ? "" : "s"}.`,
         note:
           "They procrastinate least, so the load drifts to them. Want to even it out?",
@@ -63,6 +64,7 @@ export default async function CrewPage() {
     : load.counts[0];
   const pair = {
     who: personIdFromName(lightest?.name ?? "sofia") as PersonId,
+    userId: lightest?.userId ?? "",
     available: (lightest?.openCount ?? 0) <= 1,
   };
 
