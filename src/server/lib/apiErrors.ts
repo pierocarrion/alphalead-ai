@@ -34,6 +34,26 @@ const FIELD_HINTS: Record<string, string> = {
   taskId: "Please pick a task.",
   title: "Please add a title.",
   mood: "Please tell us how you're feeling.",
+  draft: "Please provide the task details.",
+  load: "Please choose a task load.",
+  category: "Please choose a category.",
+  completedAt: "Please provide a valid completion date.",
+  status: "Please choose a valid status.",
+  plan: "Please choose a plan.",
+  returnUrl: "Please provide a valid return URL.",
+  completed: "Please tell us if this is complete.",
+  feeling: "Please tell us how you're feeling.",
+  durationSec: "Please choose a valid duration.",
+  messageId: "Please provide a valid message.",
+  deadline: "Please provide a valid deadline.",
+  fromQuote: "Please provide the original quote.",
+  micro: "Please provide a micro step.",
+  action: "Please provide a first action.",
+  resource: "Please provide a resource name.",
+  app: "Please provide an app name.",
+  due: "Please provide a due date.",
+  selfMade: "Please tell us if this is self-assigned.",
+  confidence: "Please provide a confidence level.",
 };
 
 function isPrismaKnown(error: unknown): error is PrismaKnownError {
@@ -50,9 +70,10 @@ function friendlyZodMessage(error: ZodError): string {
   const seen = new Set<string>();
   const messages: string[] = [];
   for (const issue of issues) {
-    const field =
-      typeof issue.path?.[0] === "string" ? String(issue.path[0]) : "";
-    const hint = field ? FIELD_HINTS[field] : undefined;
+    const path = issue.path ?? [];
+    const lastField = typeof path[path.length - 1] === "string" ? String(path[path.length - 1]) : "";
+    const firstField = typeof path[0] === "string" ? String(path[0]) : "";
+    const hint = (lastField && FIELD_HINTS[lastField]) || (firstField && FIELD_HINTS[firstField]);
     const msg = hint ?? "Please check your details and try again.";
     if (!seen.has(msg)) {
       seen.add(msg);
