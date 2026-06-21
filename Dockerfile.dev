@@ -1,0 +1,18 @@
+# Dockerfile.dev — local development with hot reload
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install tools needed for the entrypoint (waiting for DB)
+RUN apk add --no-cache postgresql-client
+
+# Copy package files first for better caching
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# Copy the rest of the app (will be overwritten by volume mount in dev)
+COPY . .
+
+EXPOSE 3000
+
+CMD ["sh", "scripts/entrypoint-dev.sh"]

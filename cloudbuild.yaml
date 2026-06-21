@@ -1,0 +1,77 @@
+steps:
+  # Build and push the container image to Google Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - "--no-cache"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${_VERSION}"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:latest"
+      - "."
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}"
+      - "--all-tags"
+
+  # Deploy the image to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_SERVICE}"
+      - "--image"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${_VERSION}"
+      - "--region"
+      - "${_REGION}"
+      - "--platform"
+      - managed
+      - "--allow-unauthenticated"
+      - "--service-account"
+      - "${_SERVICE_ACCOUNT}"
+      - "--set-secrets"
+      - "DATABASE_URL=${_DB_SECRET}:latest,NEXTAUTH_SECRET=${_AUTH_SECRET}:latest,STRIPE_SECRET_KEY=${_STRIPE_SECRET}:latest,STRIPE_WEBHOOK_SECRET=${_STRIPE_WEBHOOK}:latest,STRIPE_PUBLIC_KEY=${_STRIPE_PUBLIC}:latest,STRIPE_PRICE_TEAM=${_STRIPE_PRICE_TEAM}:latest,STRIPE_PRICE_BUSINESS=${_STRIPE_PRICE_BUSINESS}:latest"
+      - "--set-env-vars"
+      - "NEXTAUTH_URL=${_NEXTAUTH_URL},GOOGLE_CLOUD_PROJECT_ID=${PROJECT_ID},VERTEX_AI_LOCATION=${_VERTEX_LOCATION},GEMINI_ENABLED=true,GEMINI_FALLBACK=true,GEMINI_MODEL=${_GEMINI_MODEL}"
+      - "--add-cloudsql-instances"
+      - "${PROJECT_ID}:${_REGION}:${_DB_INSTANCE}"
+      - "--memory"
+      - "1Gi"
+      - "--cpu"
+      - "1"
+      - "--concurrency"
+      - "80"
+      - "--timeout"
+      - "300"
+      - "--max-instances"
+      - "5"
+      - "--min-instances"
+      - "0"
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${_VERSION}"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:latest"
+
+substitutions:
+  _REGION: us-central1
+  _REPO: motiva
+  _SERVICE: alphateam-staging
+  _DB_INSTANCE: motiva-db
+  _DB_SECRET: database-url
+  _AUTH_SECRET: nextauth-secret
+  _STRIPE_SECRET: stripe-secret-key
+  _STRIPE_WEBHOOK: stripe-webhook-secret
+  _STRIPE_PUBLIC: stripe-public-key
+  _STRIPE_PRICE_TEAM: stripe-price-team
+  _STRIPE_PRICE_BUSINESS: stripe-price-business
+  _NEXTAUTH_URL: https://alphateam-staging-lql5h6aova-uc.a.run.app
+  _VERTEX_LOCATION: us-central1
+  _GEMINI_MODEL: gemini-2.5-flash-preview-05-20
+  _VERSION: latest
+  _SERVICE_ACCOUNT: cloud-run-motiva@alphalead-ai.iam.gserviceaccount.com
+
+options:
+  logging: CLOUD_LOGGING_ONLY

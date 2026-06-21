@@ -1,0 +1,92 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { z } from "zod";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/server/lib/prisma";
+import { analyzeCrewMood } from "@/server/lib/gemini";
+
+const requestSchema = z.object({
+  workspaceId: z.string().min(1),
+  days: z.coerce.number().min(1).max(30).default(7),
+});
+
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const parseResult = requestSchema.safeParse(await request.json());
+  if (!parseResult.success) {
+    return NextResponse.json({ error: "Invalid request", issues: parseResult.error.issues }, { status: 400 });
+  }
+
+  const { workspaceId, days } = parseResult.data;
+
+  const membership = await prisma.membership.findUnique({
+    where: { userId_workspaceId: { userId: user.id, workspaceId } },
+  });
+
+  if (!membership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const messages = await prisma.message.findMany({
+    where: {
+      channel: { workspaceId },
+      createdAt: { gte: since },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: { userId: true, content: true, createdAt: true },
+  });
+
+  if (messages.length === 0) {
+    return NextResponse.json({
+      mood: { value: 50, label: "neutral" },
+      signals: [],
+      usedGemini: false,
+      messageCount: 0,
+    });
+  }
+
+  const gemini = await analyzeCrewMood(
+    messages.map((m) => ({
+      userId: m.userId,
+      text: m.content,
+      createdAt: m.createdAt.toISOString(),
+    }))
+  );
+
+  if (!gemini.ok) {
+    console.error("[insights/mood] Gemini error:", gemini.error);
+    return NextResponse.json(
+      {
+        mood: { value: 50, label: "neutral" },
+        signals: [],
+        usedGemini: false,
+        messageCount: messages.length,
+        error: gemini.error,
+      },
+      { status: 200 }
+    );
+  }
+
+  return NextResponse.json({
+    ...gemini.data,
+    usedGemini: true,
+    messageCount: messages.length,
+  });
+}

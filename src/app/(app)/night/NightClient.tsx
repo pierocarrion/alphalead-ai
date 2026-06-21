@@ -1,0 +1,92 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Mira, Button } from "@/shared/ui";
+
+interface NightClientProps {
+  warm: boolean;
+  name: string;
+}
+
+export function NightClient({ warm, name }: NightClientProps) {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    if (stage === 1) {
+      const t = setTimeout(() => setStage(2), 8200);
+      return () => clearTimeout(t);
+    }
+  }, [stage]);
+
+  return (
+    <div
+      className="flex h-full flex-col"
+      style={{
+        background:
+          "radial-gradient(120% 80% at 50% 30%, #1b1a28 0%, #100f17 60%, #0a0910 100%)",
+      }}
+    >
+      <div className="h-[58px] flex-none" />
+      {stage !== 1 && (
+        <div className="flex flex-none justify-end px-[18px]">
+          <Button variant="quiet" href="/home">Close</Button>
+        </div>
+      )}
+
+      {/* Stage 0 — invitation */}
+      {stage === 0 && (
+        <div className="flex flex-1 flex-col items-center justify-center px-8 py-8 text-center">
+          <Mira size={84} mood="calm" className="mb-6" />
+          <p className="fade text-xs font-bold uppercase tracking-[0.14em]" style={{ color: "#9FB8E0" }}>
+            {new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </p>
+          <h1 className="rise mt-3 font-display text-[30px] leading-tight text-ink text-wrap-pretty">
+            The scroll can wait.
+          </h1>
+          <p className="lead rise mt-3.5 max-w-[280px] text-ink-2">
+            {warm
+              ? "You don’t owe the day anything more. Let’s set it down softly, together."
+              : "Nothing left to do tonight. Let’s wind down."}
+          </p>
+          <div className="card rise mt-6 max-w-[300px] p-4">
+            <p className="text-xs text-ink-3 text-wrap-pretty">
+              The late scroll quietly costs most people ~332 hours of sleep a year. You don’t have
+              to spend yours tonight.
+            </p>
+          </div>
+          <div className="mt-7 w-full max-w-[320px]">
+            <Button full size="lg" icon="moon" onClick={() => setStage(1)}>
+              Breathe, then set it down
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Stage 1 — breathing */}
+      {stage === 1 && (
+        <div className="flex flex-1 flex-col items-center justify-center px-8 py-8 text-center">
+          <div className="relative mb-9 flex h-[200px] w-[200px] items-center justify-center">
+            <div className="breathe-halo" />
+            <Mira size={96} mood="calm" />
+          </div>
+          <h1 className="h1 breathe-word">Breathe in…</h1>
+          <p className="body mt-2.5 text-ink-2">Follow the glow. Four slow rounds.</p>
+        </div>
+      )}
+
+      {/* Stage 2 — goodnight */}
+      {stage === 2 && (
+        <div className="flex flex-1 flex-col items-center justify-center px-8 py-8 text-center">
+          <Mira size={64} mood="happy" className="mb-6 opacity-90" />
+          <h1 className="h1 rise">Goodnight, {name}.</h1>
+          <p className="lead rise mt-3 max-w-[260px] text-ink-2">
+            I’ll be here in the morning. Rest is the most productive thing you’ll do tonight.
+          </p>
+          <Button variant="quiet" href="/home" className="rise mt-8">
+            Set the phone down
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

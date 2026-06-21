@@ -1,26 +1,211 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Surfaces */
+  --color-bg: #15131a;
+  --color-bg-2: #1b1922;
+  --color-surface: #221f2a;
+  --color-surface-2: #2a2733;
+  --color-surface-3: #332f3d;
+
+  /* Lines */
+  --color-line: rgba(255, 236, 214, 0.08);
+  --color-line-2: rgba(255, 236, 214, 0.14);
+
+  /* Text */
+  --color-ink: #f3ece1;
+  --color-ink-2: #b7afa4;
+  --color-ink-3: #7e7870;
+
+  /* Accents */
+  --color-accent: #e6ac73;
+  --color-accent-ink: #231a10;
+  --color-accent-soft: rgba(230, 172, 115, 0.16);
+  --color-glow: #b6a6e0;
+  --color-glow-soft: rgba(182, 166, 224, 0.16);
+  --color-sage: #93c2a2;
+  --color-sage-soft: rgba(147, 194, 162, 0.16);
+
+  /* Typography */
+  --font-display: var(--font-fredoka);
+  --font-body: var(--font-nunito);
+
+  /* Radii */
+  --radius-card: 24px;
+  --radius-button: 999px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --ease-soft: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --m: 1;
+  --d: 1;
+  --t-fast: calc(0.22s * var(--m));
+  --t: calc(0.42s * var(--m));
+  --t-slow: calc(0.8s * var(--m));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #211c2b 0%, #100e15 60%, #0b0a0f 100%);
+  color: var(--color-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100%;
+}
+
+/* Scrollbar hiding for mobile-like scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mira orb */
+.mira {
+  position: relative;
+  border-radius: 50%;
+  background:
+    radial-gradient(60% 60% at 35% 30%, #f4d6a8 0%, var(--color-accent) 38%, var(--color-glow) 92%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 8px 30px -6px var(--color-glow-soft),
+    0 0 38px -4px var(--color-glow-soft);
+  animation: mira-breathe calc(4.6s * var(--m, 1)) ease-in-out infinite;
+}
+
+.mira::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  left: 16%;
+  width: 34%;
+  height: 26%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  filter: blur(1px);
+}
+
+@keyframes mira-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.045); }
+}
+
+.mira-eyes {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18%;
+}
+
+.mira-eye {
+  width: 11%;
+  height: 24%;
+  background: #2a2030;
+  border-radius: 999px;
+  animation: mira-blink calc(5.2s * var(--m, 1)) ease-in-out infinite;
+}
+
+@keyframes mira-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mira,
+  .mira-eye {
+    animation: none !important;
+  }
+}
+
+/* Entrance animations */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate .rise {
+  animation: rise var(--t) var(--ease-out) both;
+}
+
+.animate .fade {
+  animation: fade var(--t) var(--ease-out) both;
+}
+
+.animate .stagger > * {
+  animation: rise var(--t) var(--ease-out) both;
+}
+
+.animate .stagger > *:nth-child(1) { animation-delay: calc(0.04s * var(--m)); }
+.animate .stagger > *:nth-child(2) { animation-delay: calc(0.10s * var(--m)); }
+.animate .stagger > *:nth-child(3) { animation-delay: calc(0.16s * var(--m)); }
+.animate .stagger > *:nth-child(4) { animation-delay: calc(0.22s * var(--m)); }
+.animate .stagger > *:nth-child(5) { animation-delay: calc(0.28s * var(--m)); }
+.animate .stagger > *:nth-child(6) { animation-delay: calc(0.34s * var(--m)); }
+
+/* Pulse ring */
+.pulse-ring {
+  animation: pulse-ring calc(3.4s * var(--m)) var(--ease-out) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.7); opacity: 0.5; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* Typing dots */
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Night breathing halo */
+@keyframes breathe-scale {
+  0%, 100% { transform: scale(0.7); opacity: 0.5; }
+  25%, 50% { transform: scale(1.25); opacity: 1; }
+  75% { transform: scale(0.7); opacity: 0.5; }
+}
+
+@keyframes breathe-word {
+  0%, 100% { opacity: 0.4; }
+  25%, 50% { opacity: 1; }
+  75% { opacity: 0.4; }
+}
+
+.breathe-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-glow-soft), transparent 70%);
+  animation: breathe-scale calc(8s * var(--m, 1)) ease-in-out infinite;
+}
+
+.breathe-word {
+  animation: breathe-word calc(8s * var(--m, 1)) ease-in-out infinite;
 }

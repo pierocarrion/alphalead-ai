@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: motiva-postgres
+    environment:
+      POSTGRES_USER: motiva
+      POSTGRES_PASSWORD: motiva
+      POSTGRES_DB: motiva
+    ports:
+      - "5432:5432"
+    volumes:
+      - motiva_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U motiva -d motiva"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: motiva-app
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://motiva:motiva@postgres:5432/motiva?schema=public"
+      NEXTAUTH_SECRET: "local-dev-secret-change-me-in-production"
+      NEXTAUTH_URL: "http://localhost:3000"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: motiva
+      DB_NAME: motiva
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  motiva_pg_data:

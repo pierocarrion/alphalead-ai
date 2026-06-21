@@ -1,0 +1,85 @@
+"use client";
+
+export type IconName =
+  | "home"
+  | "chat"
+  | "crew"
+  | "spark"
+  | "moon"
+  | "check"
+  | "arrow"
+  | "back"
+  | "close"
+  | "plus"
+  | "pause"
+  | "play"
+  | "send"
+  | "heart"
+  | "leaf"
+  | "link"
+  | "shield"
+  | "clock"
+  | "bell"
+  | "doc";
+
+interface IconProps {
+  name: IconName;
+  size?: number;
+  color?: string;
+  stroke?: number;
+}
+
+export function Icon({
+  name,
+  size = 22,
+  color = "currentColor",
+  stroke = 2,
+}: IconProps) {
+  const p = {
+    fill: "none",
+    stroke: color,
+    strokeWidth: stroke,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  } as const;
+
+  const paths: Record<IconName, React.ReactNode> = {
+    home: <path d="M3 11l9-7 9 7M5 10v9h5v-5h4v5h5v-9" {...p} />,
+    chat: <path d="M4 5h16v11H9l-4 3v-3H4z" {...p} />,
+    crew: (
+      <>
+        <circle cx="8" cy="9" r="3" {...p} />
+        <circle cx="16" cy="9" r="3" {...p} />
+        <path d="M3 19c0-2.5 2.2-4 5-4M21 19c0-2.5-2.2-4-5-4" {...p} />
+      </>
+    ),
+    spark: <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18" {...p} />,
+    moon: <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" {...p} />,
+    check: <path d="M5 12.5l4.5 4.5L19 7" {...p} />,
+    arrow: <path d="M5 12h14M13 6l6 6-6 6" {...p} />,
+    back: <path d="M19 12H5M11 6l-6 6 6 6" {...p} />,
+    close: <path d="M6 6l12 12M18 6L6 18" {...p} />,
+    plus: <path d="M12 5v14M5 12h14" {...p} />,
+    pause: <path d="M9 5v14M15 5v14" {...p} />,
+    play: <path d="M7 5l12 7-12 7z" {...p} />,
+    send: <path d="M5 12l15-7-7 15-2-6-6-2z" {...p} />,
+    heart: <path d="M12 20s-7-4.6-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.4 12 20 12 20z" {...p} />,
+    leaf: <path d="M5 19c0-8 6-13 14-13 0 8-5 14-13 14-1 0-1-1-1-1zM6 18c4-4 7-7 9-9" {...p} />,
+    link: <path d="M9 13a4 4 0 0 0 6 .5l2-2a4 4 0 0 0-6-6l-1 1M15 11a4 4 0 0 0-6-.5l-2 2a4 4 0 0 0 6 6l1-1" {...p} />,
+    shield: <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" {...p} />,
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="8.5" {...p} />
+        <path d="M12 7.5V12l3 2" {...p} />
+      </>
+    ),
+    bell: <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0" {...p} />,
+    doc: <path d="M7 3h7l4 4v14H7zM14 3v4h4" {...p} />,
+  };
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+      {paths[name] ?? null}
+    </svg>
+  );
+}

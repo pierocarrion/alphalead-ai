@@ -1,0 +1,316 @@
+/* ============================================================
+   Motiva AI — Warm Dark design tokens
+   Driven at runtime by Tweaks (palette / type / motion / density).
+   ============================================================ */
+
+:root {
+  /* base warm-dark surface ramp (constant across palettes) */
+  --bg:        #15131A;
+  --bg-2:      #1B1922;
+  --surface:   #221F2A;
+  --surface-2: #2A2733;
+  --surface-3: #332F3D;
+  --line:      rgba(255, 236, 214, 0.08);
+  --line-2:    rgba(255, 236, 214, 0.14);
+
+  --ink:       #F3ECE1;   /* primary text, warm cream */
+  --ink-2:     #B7AFA4;   /* secondary */
+  --ink-3:     #7E7870;   /* tertiary / hints */
+
+  /* accents — overridden by palette tweak */
+  --accent:    #E6AC73;   /* primary CTA (amber) */
+  --accent-ink:#231a10;   /* text on accent */
+  --accent-soft: rgba(230, 172, 115, 0.16);
+  --glow:      #B6A6E0;   /* Mira / AI presence (lavender) */
+  --glow-soft: rgba(182, 166, 224, 0.16);
+  --sage:      #93C2A2;   /* completion / momentum */
+  --sage-soft: rgba(147, 194, 162, 0.16);
+
+  /* type */
+  --font-display: 'Fredoka', system-ui, sans-serif;
+  --font-body:    'Nunito', system-ui, sans-serif;
+
+  /* density scale (1 = comfortable) */
+  --d: 1;
+  --space: calc(20px * var(--d));
+
+  /* motion (1 = standard) */
+  --m: 1;
+  --t-fast: calc(0.22s * var(--m));
+  --t:      calc(0.42s * var(--m));
+  --t-slow: calc(0.8s * var(--m));
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-soft: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+* { box-sizing: border-box; }
+
+/* ---------- stage ---------- */
+html, body {
+  margin: 0;
+  height: 100%;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #211c2b 0%, #100e15 60%, #0b0a0f 100%);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root { min-height: 100%; }
+
+.stage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ---------- app surface inside the phone ---------- */
+.app {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(140% 70% at 50% -8%, #241d2e 0%, var(--bg) 52%, #110f16 100%);
+  color: var(--ink);
+  overflow: hidden;
+  font-family: var(--font-body);
+}
+
+/* the scroll/content region that clears the status bar + home indicator */
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* entrance animations only when the tab is visible (added via JS).
+   Base state is always visible, so reduced-motion / hidden-tab / print show content. */
+.motiva.animate .screen { animation: screen-in var(--t) var(--ease) both; }
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+.pad-top { height: 58px; flex: none; }     /* clears status bar */
+.pad-bot { height: 30px; flex: none; }     /* clears home indicator */
+
+/* ---------- typography helpers ---------- */
+.display { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+.h1 { font-family: var(--font-display); font-weight: 500; font-size: 30px; line-height: 1.12; letter-spacing: -0.015em; color: var(--ink); margin: 0; }
+.h2 { font-family: var(--font-display); font-weight: 500; font-size: 23px; line-height: 1.18; letter-spacing: -0.01em; color: var(--ink); margin: 0; }
+.kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+.body { font-size: 16px; line-height: 1.5; color: var(--ink-2); margin: 0; }
+.lead { font-size: 17.5px; line-height: 1.5; color: var(--ink); margin: 0; }
+.tiny { font-size: 13px; line-height: 1.45; color: var(--ink-3); margin: 0; }
+.text-wrap-pretty { text-wrap: pretty; }
+
+/* ---------- buttons ---------- */
+.btn {
+  appearance: none; border: 0; cursor: pointer;
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 18px; letter-spacing: -0.01em;
+  border-radius: 999px;
+  padding: 17px 26px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  transition: transform var(--t-fast) var(--ease-soft), filter var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+  user-select: none;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.965); }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 10px 30px -8px var(--accent-soft), 0 0 0 1px rgba(255,255,255,0.06) inset;
+}
+.btn-primary:hover { filter: brightness(1.05); }
+
+.btn-ghost {
+  background: transparent; color: var(--ink-2);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+}
+.btn-ghost:hover { color: var(--ink); background: rgba(255,255,255,0.03); }
+
+.btn-quiet {
+  background: transparent; color: var(--ink-3);
+  font-weight: 600; font-family: var(--font-body); font-size: 15px;
+  padding: 12px 14px;
+}
+.btn-quiet:hover { color: var(--ink-2); }
+
+.btn-full { width: 100%; }
+.btn-lg { padding: 19px 28px; font-size: 19px; }
+
+/* ---------- cards ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: calc(18px * var(--d));
+}
+
+/* ---------- avatars ---------- */
+.avatar {
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 600;
+  color: #1a1620; flex: none;
+  letter-spacing: 0;
+}
+
+/* ============================================================
+   Mira — the companion orb
+   ============================================================ */
+.mira {
+  position: relative; flex: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(60% 60% at 35% 30%, #f4d6a8 0%, var(--accent) 38%, var(--glow) 92%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.12) inset,
+    0 8px 30px -6px var(--glow-soft),
+    0 0 38px -4px var(--glow-soft);
+  animation: mira-breathe calc(4.6s * var(--m, 1)) ease-in-out infinite;
+}
+.mira::after { /* sheen */
+  content: ''; position: absolute;
+  top: 12%; left: 16%; width: 34%; height: 26%;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.55);
+  filter: blur(1px);
+}
+@keyframes mira-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+.mira-eyes {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  gap: 18%;
+}
+.mira-eye {
+  width: 11%; height: 24%;
+  background: #2a2030; border-radius: 999px;
+  animation: mira-blink calc(5.2s * var(--m, 1)) ease-in-out infinite;
+}
+@keyframes mira-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.12); }
+}
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mira, .mira-eye { animation: none !important; }
+}
+
+/* ---------- soft pulsing ring (used around Mira during focus) ---------- */
+.pulse-ring {
+  position: absolute; border-radius: 50%;
+  border: 1.5px solid var(--glow);
+  opacity: 0;
+  animation: pulse-ring calc(3.4s * var(--m)) var(--ease) infinite;
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(0.7); opacity: 0.5; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* ---------- chips ---------- */
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+
+/* ---------- generic fade/rise util (gated on .animate; visible at rest) ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.motiva.animate .rise { animation: rise var(--t) var(--ease) both; }
+.motiva.animate .fade { animation: fade var(--t) var(--ease) both; }
+
+.motiva.animate .stagger > * { animation: rise var(--t) var(--ease) both; }
+.motiva.animate .stagger > *:nth-child(1) { animation-delay: calc(0.04s * var(--m)); }
+.motiva.animate .stagger > *:nth-child(2) { animation-delay: calc(0.10s * var(--m)); }
+.motiva.animate .stagger > *:nth-child(3) { animation-delay: calc(0.16s * var(--m)); }
+.motiva.animate .stagger > *:nth-child(4) { animation-delay: calc(0.22s * var(--m)); }
+.motiva.animate .stagger > *:nth-child(5) { animation-delay: calc(0.28s * var(--m)); }
+.motiva.animate .stagger > *:nth-child(6) { animation-delay: calc(0.34s * var(--m)); }
+
+/* overlays — visible at rest, fade only when animating */
+.motiva.animate .overlay { animation: fade var(--t-fast) var(--ease) both; }
+
+/* ---------- bottom nav ---------- */
+.nav {
+  flex: none;
+  display: flex; align-items: stretch; justify-content: space-around;
+  padding: 8px 14px 26px;
+  background: linear-gradient(to top, var(--bg-2) 60%, transparent);
+  position: relative; z-index: 5;
+}
+.nav-item {
+  flex: 1; background: none; border: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px 0 4px; color: var(--ink-3);
+  font-family: var(--font-body); font-weight: 700; font-size: 11px;
+  transition: color var(--t-fast) var(--ease);
+}
+.nav-item.active { color: var(--ink); }
+.nav-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.nav-item.active .nav-dot { opacity: 1; }
+
+/* ---------- progress / momentum dots ---------- */
+.steps { display: flex; gap: 6px; align-items: center; }
+.step-pill {
+  height: 5px; border-radius: 999px; flex: 1;
+  background: var(--line-2);
+  transition: background var(--t) var(--ease);
+}
+.step-pill.on { background: var(--accent); }
+
+/* selectable option tiles (affective labeling, etc.) */
+.opt {
+  width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 20px; padding: 16px 18px;
+  color: var(--ink); font-family: var(--font-body); font-weight: 600; font-size: 16.5px;
+  display: flex; align-items: center; gap: 14px;
+  transition: transform var(--t-fast) var(--ease-soft), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.opt:hover { background: var(--surface-2); }
+.opt:active { transform: scale(0.98); }
+.opt.sel {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.opt-emoji {
+  width: 38px; height: 38px; border-radius: 12px; flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: var(--surface-2);
+}
+
+/* confetti particle */
+.spark {
+  position: absolute; width: 9px; height: 9px; border-radius: 2px;
+  top: 50%; left: 50%;
+  animation: spark-fly var(--t-slow) var(--ease) forwards;
+}
+@keyframes spark-fly {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1) rotate(var(--dr)); opacity: 0; }
+}

@@ -1,36 +1,143 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AlphaTeam AI
 
-## Getting Started
+A gentle, anti-guilt productivity companion for individuals and teams. Mira listens to your chat, detects tasks before they become pressure, and shrinks each one into a 2-minute first step. Previously Motiva AI.
 
-First, run the development server:
+Built with **Next.js 16**, **React 19**, **TypeScript**, **Tailwind CSS v4**, **Prisma**, and **PostgreSQL**.
+
+## Features
+
+- **Waitlist landing page** for founders and managers.
+- **Team chat** with silent AI task detection.
+- **2-minute unlock ritual** with affective labeling and focus companion.
+- **Crew space** for team mood, load balancing, milestones, and pair-start.
+- **Insights, Day mode, Night wind-down, Capture, and Settings** screens.
+- **Stripe checkout and subscriptions** for team/business plans.
+- **AI coordinator and health-check engine** for workspace signals.
+- **Evidence collection** via in-app feedback.
+
+## Local development
+
+The fastest way to run the project locally is with Docker Compose. It starts PostgreSQL, generates the Prisma client, pushes the schema, seeds demo data, and runs the Next.js dev server with hot reload.
+
+### Requirements
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+
+### 1. Start everything
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker-compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Wait until you see:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+✅ Seed complete
+🚀 Starting Next.js dev server...
+✓ Ready in ...
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Open the app
 
-## Learn More
+```text
+http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Demo login
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Email:** `maya@example.com`
+- **Password:** `demo1234`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Stop
 
-## Deploy on Vercel
+```bash
+# Stop containers (keep database)
+docker-compose down
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Stop and delete database
+docker-compose down -v
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Optional: run without Docker
+
+If you prefer to run directly on your machine:
+
+```bash
+npm install
+# Start PostgreSQL manually, then:
+npx prisma generate
+npx prisma migrate dev
+npm run db:seed
+npm run dev
+```
+
+## Tests
+
+```bash
+npm run test:run      # unit tests
+npm run test:e2e      # Playwright end-to-end tests
+```
+
+## GCP deployment architecture
+
+```
+User ──▶ Cloud Run (Next.js)
+            │
+            ├──▶ Cloud SQL (PostgreSQL)
+            ├──▶ Secret Manager (env vars)
+            └──▶ Stripe (payments)
+
+Build: Cloud Build ──▶ Artifact Registry ──▶ Cloud Run
+```
+
+### GCP services used
+
+- **Cloud Run** — serverless container runtime
+- **Cloud Build** — CI/CD pipeline
+- **Artifact Registry** — Docker image storage
+- **Cloud SQL (PostgreSQL)** — managed database
+- **Secret Manager** — secure environment variables
+- **Cloud Logging** — centralized logs
+- **Cloud Monitoring** — metrics, uptime checks, alerts
+- **Cloud Load Balancing** (optional) — custom domains and CDN
+- **Cloud DNS** (optional) — domain DNS
+- **Vertex AI** (optional) — future LLM features
+- **Cloud Storage** (optional) — backups and exports
+
+### Deploy to staging
+
+1. Follow the one-time setup in [`GCP_DEPLOY.md`](./GCP_DEPLOY.md).
+2. Run migrations:
+
+```bash
+gcloud builds submit --config cloudbuild-migrate.yaml
+```
+
+3. Build and deploy:
+
+```bash
+gcloud builds submit --config cloudbuild.yaml \
+  --substitutions=_NEXTAUTH_URL=https://<your-url>.run.app
+```
+
+Detailed instructions, service account setup, and production checklist are in [`GCP_DEPLOY.md`](./GCP_DEPLOY.md).
+
+## Project structure
+
+```
+src/
+  app/           # Next.js App Router pages and API routes
+  features/      # Domain-driven modules (auth, chat, tasks, rituals)
+  server/lib/    # Prisma, Stripe, AI coordinator, health engine
+  shared/ui/     # Reusable UI components (Mira, Button, etc.)
+prisma/          # Schema, migrations, seed
+scripts/         # Evidence export and utilities
+```
+
+## Hackathon deliverables
+
+See [`HACKATHON.md`](./HACKATHON.md) for narrative, demo flow, evidence collection, and export script.
+
+## License
+
+Private — built for the hackathon.

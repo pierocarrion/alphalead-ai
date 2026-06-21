@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: motiva
+          POSTGRES_PASSWORD: motiva
+          POSTGRES_DB: motiva
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://motiva:motiva@localhost:5432/motiva?schema=public
+      NEXTAUTH_SECRET: ci-secret-must-be-at-least-32-characters-long
+      NEXTAUTH_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+      - run: npx prisma db push --accept-data-loss
+
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test:run
+      - run: npm run test:e2e
