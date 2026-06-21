@@ -1,34 +1,30 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { requireUser } from "@/server/lib/auth";
+
+const bodySchema = z.object({
+  completed: z.boolean(),
+});
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) {
-      return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
     const { id } = await params;
-    const body = (await parseRequestBody(request)) as { completed?: boolean };
+    const parsed = bodySchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: toFriendlyMessage(parsed.error) },
+        { status: 400 }
+      );
+    }
 
     const existing = await prisma.ritualSession.findFirst({
       where: { id, userId: user.id },
@@ -40,14 +36,14 @@ export async function PATCH(
       );
     }
 
-    const completedAt = body.completed ? new Date() : existing.completedAt;
+    const completedAt = parsed.data.completed ? new Date() : existing.completedAt;
 
     const ritual = await prisma.ritualSession.update({
       where: { id },
       data: { completedAt },
     });
 
-    if (body.completed && existing.taskId) {
+    if (parsed.data.completed && existing.taskId) {
       await prisma.task.update({
         where: { id: existing.taskId },
         data: { status: "done", completedAt: new Date() },

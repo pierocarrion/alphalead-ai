@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { z } from "zod";
-import { jsonError, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -23,15 +23,7 @@ async function readWaitlist(): Promise<Array<Record<string, unknown>>> {
 
 export async function POST(request: Request) {
   try {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Please send a valid request." },
-        { status: 400 }
-      );
-    }
+    const body = await parseRequestBody(request);
 
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {

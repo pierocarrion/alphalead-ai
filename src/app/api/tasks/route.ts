@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { requireUser } from "@/server/lib/auth";
+
+const bodySchema = z.object({
+  messageId: z.string().optional(),
+  draft: z.object({
+    title: z.string().min(1),
+    fromQuote: z.string(),
+    category: z.string(),
+    app: z.string(),
+    due: z.string(),
+    deadline: z.union([z.string(), z.date()]).nullable().optional(),
+    load: z.enum(["Light", "Medium", "Heavy"]),
+    micro: z.string(),
+    action: z.string(),
+    resource: z.string(),
+    selfMade: z.boolean(),
+    confidence: z.number(),
+  }),
+});
 
 function guessQuadrant(draft: DetectedTaskDraft): string | null {
   const urgent = /tomorrow|tonight|today|asap|urgent|before/.test(draft.due.toLowerCase());
@@ -16,55 +34,44 @@ function guessQuadrant(draft: DetectedTaskDraft): string | null {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) {
+    const parsed = bodySchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
-
-    const body = (await parseRequestBody(request)) as {
-      messageId?: string;
-      draft: DetectedTaskDraft;
-    };
-
-    if (!body.draft) {
-      return NextResponse.json(
-        { error: "Please tell us what task to create." },
+        { error: toFriendlyMessage(parsed.error) },
         { status: 400 }
       );
     }
 
+    const { messageId, draft } = parsed.data;
+
+    const taskDraft: DetectedTaskDraft = {
+      ...draft,
+      deadline: draft.deadline ? new Date(draft.deadline) : null,
+    };
+
     const task = await prisma.task.create({
       data: {
         userId: user.id,
-        messageId: body.messageId ?? null,
-        title: body.draft.title,
-        fromQuote: body.draft.fromQuote,
-        category: body.draft.category,
-        app: body.draft.app,
-        due: body.draft.due,
-        deadline: body.draft.deadline ?? null,
-        load: body.draft.load,
-        micro: body.draft.micro,
-        action: body.draft.action,
-        resource: body.draft.resource,
-        selfMade: body.draft.selfMade,
+        messageId: messageId ?? null,
+        title: taskDraft.title,
+        fromQuote: taskDraft.fromQuote,
+        category: taskDraft.category,
+        app: taskDraft.app,
+        due: taskDraft.due,
+        deadline: taskDraft.deadline,
+        load: taskDraft.load,
+        micro: taskDraft.micro,
+        action: taskDraft.action,
+        resource: taskDraft.resource,
+        selfMade: taskDraft.selfMade,
         status: "open",
-        quadrant: guessQuadrant(body.draft),
-        priority: body.draft.load === "Heavy" ? 5 : body.draft.load === "Medium" ? 3 : 1,
-        tags: [body.draft.category.toLowerCase()],
+        quadrant: guessQuadrant(taskDraft),
+        priority: taskDraft.load === "Heavy" ? 5 : taskDraft.load === "Medium" ? 3 : 1,
+        tags: [taskDraft.category.toLowerCase()],
       },
     });
 

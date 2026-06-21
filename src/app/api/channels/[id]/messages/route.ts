@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
 import { deriveTaskEnhanced, looksLikeTask } from "@/features/tasks/lib/detect";
 import { coordinate } from "@/server/lib/aiCoordinator";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+
+const postSchema = z.object({
+  text: z.string().min(1),
+});
 
 export async function GET(
   _request: Request,
@@ -20,6 +25,18 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "We couldn't find your account. Please sign in again." },
+        { status: 404 }
+      );
+    }
 
     const channel = await prisma.channel.findUnique({
       where: { id },
@@ -39,12 +56,7 @@ export async function GET(
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-
-    const isMember = channel.workspace.memberships.some((m) => m.userId === user?.id);
+    const isMember = channel.workspace.memberships.some((m) => m.userId === user.id);
     if (!isMember) {
       return NextResponse.json(
         { error: "You don't have access to that channel." },
@@ -55,7 +67,7 @@ export async function GET(
     // Look for an open task linked to any message in this channel for the current user
     const openTask = await prisma.task.findFirst({
       where: {
-        userId: user?.id,
+        userId: user.id,
         status: "open",
         messageId: { in: channel.messages.map((m) => m.id) },
       },
@@ -108,8 +120,14 @@ export async function POST(
     }
 
     const { id } = await params;
-    const body = (await parseRequestBody(request)) as { text?: string };
-    const text = body.text?.trim();
+    const parsed = postSchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: toFriendlyMessage(parsed.error) },
+        { status: 400 }
+      );
+    }
+    const text = parsed.data.text.trim();
     if (!text) {
       return NextResponse.json(
         { error: "Please add some text to your message." },

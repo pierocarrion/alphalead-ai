@@ -1,44 +1,33 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { requireUser } from "@/server/lib/auth";
+
+const bodySchema = z.object({
+  taskId: z.string().min(1),
+  feeling: z.string().optional(),
+  durationSec: z.number().int().positive().optional(),
+});
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) {
+    const parsed = bodySchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
-
-    const body = (await parseRequestBody(request)) as {
-      taskId: string;
-      feeling?: string;
-      durationSec?: number;
-    };
-
-    if (!body.taskId) {
-      return NextResponse.json(
-        { error: "Please pick a task to start with." },
+        { error: toFriendlyMessage(parsed.error) },
         { status: 400 }
       );
     }
 
+    const { taskId, feeling, durationSec } = parsed.data;
+
     const task = await prisma.task.findFirst({
-      where: { id: body.taskId, userId: user.id },
+      where: { id: taskId, userId: user.id },
     });
     if (!task) {
       return NextResponse.json(
@@ -51,8 +40,8 @@ export async function POST(request: Request) {
       data: {
         userId: user.id,
         taskId: task.id,
-        feeling: body.feeling ?? null,
-        durationSec: body.durationSec ?? 120,
+        feeling: feeling ?? null,
+        durationSec: durationSec ?? 120,
         startedAt: new Date(),
       },
     });

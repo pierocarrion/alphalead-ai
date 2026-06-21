@@ -1,22 +1,27 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { z } from "zod";
 import { deriveTaskEnhanced, looksLikeTask } from "@/features/tasks/lib/detect";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { requireUser } from "@/server/lib/auth";
+
+const bodySchema = z.object({
+  text: z.string().min(1),
+});
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+
+    const parsed = bodySchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
+        { error: toFriendlyMessage(parsed.error) },
+        { status: 400 }
       );
     }
 
-    const body = (await parseRequestBody(request)) as { text?: string };
-    const text = body.text?.trim() ?? "";
-
+    const text = parsed.data.text.trim();
     if (!text) {
       return NextResponse.json(
         { error: "Please add some text to look at." },

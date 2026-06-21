@@ -1,31 +1,22 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { requireUser } from "@/server/lib/auth";
+
+const patchSchema = z.object({
+  status: z.string().min(1).optional(),
+  completedAt: z.string().optional(),
+});
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) {
-      return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
     const { id } = await params;
     const task = await prisma.task.findFirst({
@@ -50,23 +41,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) {
-      return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
     const { id } = await params;
     const existing = await prisma.task.findFirst({
@@ -91,26 +68,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) {
-      return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
     const { id } = await params;
-    const body = (await parseRequestBody(request)) as { status?: string; completedAt?: string };
+    const parsed = patchSchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: toFriendlyMessage(parsed.error) },
+        { status: 400 }
+      );
+    }
 
     const existing = await prisma.task.findFirst({
       where: { id, userId: user.id },
@@ -125,8 +94,8 @@ export async function PATCH(
     const task = await prisma.task.update({
       where: { id },
       data: {
-        status: body.status ?? existing.status,
-        completedAt: body.completedAt ? new Date(body.completedAt) : existing.completedAt,
+        status: parsed.data.status ?? existing.status,
+        completedAt: parsed.data.completedAt ? new Date(parsed.data.completedAt) : existing.completedAt,
       },
     });
 

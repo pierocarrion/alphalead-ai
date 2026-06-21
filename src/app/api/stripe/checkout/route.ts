@@ -1,32 +1,33 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
 import { getStripe, getPriceId } from "@/server/lib/stripe";
-import { jsonError, parseRequestBody } from "@/server/lib/apiErrors";
+import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { requireUser } from "@/server/lib/auth";
+
+const bodySchema = z.object({
+  plan: z.enum(["team", "business"]).optional(),
+  returnUrl: z.string().url().optional(),
+});
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Please sign in to continue." },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (auth.response) return auth.response;
+    const user = auth.user;
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const fullUser = await prisma.user.findUnique({
+      where: { id: user.id },
       include: { memberships: { include: { workspace: true } } },
     });
-    if (!user) {
+    if (!fullUser) {
       return NextResponse.json(
         { error: "We couldn't find your account. Please sign in again." },
         { status: 404 }
       );
     }
 
-    const membership = user.memberships[0];
+    const membership = fullUser.memberships[0];
     if (!membership) {
       return NextResponse.json(
         { error: "You need a workspace before upgrading. Please set one up first." },
@@ -34,9 +35,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = (await parseRequestBody(request)) as { plan?: "team" | "business"; returnUrl?: string };
-    const plan = body.plan === "business" ? "business" : "team";
-    const returnUrl = body.returnUrl ?? `${process.env.NEXTAUTH_URL}/settings`;
+    const parsed = bodySchema.safeParse(await parseRequestBody(request));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: toFriendlyMessage(parsed.error) },
+        { status: 400 }
+      );
+    }
+
+    const plan = parsed.data.plan === "business" ? "business" : "team";
+    const returnUrl = parsed.data.returnUrl ?? `${process.env.NEXTAUTH_URL}/settings`;
 
     // Upsert Stripe customer for the workspace.
     const subscription = await prisma.workspaceSubscription.findUnique({
@@ -46,7 +54,7 @@ export async function POST(request: Request) {
     let customerId = subscription?.stripeCustomerId;
     if (!customerId) {
       const customer = await getStripe().customers.create({
-        email: session.user.email,
+        email: user.email ?? undefined,
         metadata: { workspaceId: membership.workspaceId },
       });
       customerId = customer.id;
