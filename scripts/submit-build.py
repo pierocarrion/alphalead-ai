@@ -109,6 +109,7 @@ while time.time() < deadline:
                 print(f"  Step {i}: {step_status} (start={started}, end={finished})", file=sys.stderr)
             print("", file=sys.stderr)
             print("=== Build logs (Cloud Logging) ===", file=sys.stderr)
+            logs_fetched = False
             try:
                 log_filter = (
                     f'resource.type="build" AND '
@@ -126,15 +127,32 @@ while time.time() < deadline:
                 with urllib.request.urlopen(log_req) as log_resp:
                     log_data = json.loads(log_resp.read())
                 entries = log_data.get("entries", [])
-                if not entries:
-                    print("(No log entries found in Cloud Logging for this build)", file=sys.stderr)
+                if entries:
+                    logs_fetched = True
                 for entry in entries:
                     payload = entry.get("textPayload")
                     if payload is None:
                         payload = json.dumps(entry.get("jsonPayload", entry))
                     print(payload, file=sys.stderr)
             except Exception as log_err:
-                print(f"(Could not fetch Cloud Logging entries: {log_err})", file=sys.stderr)
+                print(f"(Cloud Logging query failed: {log_err})", file=sys.stderr)
+
+            if not logs_fetched:
+                print("", file=sys.stderr)
+                print("=== Build logs (Cloud Build API) ===", file=sys.stderr)
+                try:
+                    log_url = f"https://cloudbuild.googleapis.com/v1/projects/{PROJECT_ID}/builds/{build_id}/log"
+                    log_req = urllib.request.Request(log_url, headers=headers)
+                    with urllib.request.urlopen(log_req) as log_resp:
+                        log_data = json.loads(log_resp.read())
+                    for line in log_data.get("lines", []):
+                        print(line.get("text", ""), end="", file=sys.stderr)
+                    logs_fetched = True
+                except Exception as log_err:
+                    print(f"(Cloud Build API logs failed: {log_err})", file=sys.stderr)
+
+            if not logs_fetched:
+                print("", file=sys.stderr)
                 print(f"View logs manually at: {build_url}", file=sys.stderr)
             sys.exit(1)
 
