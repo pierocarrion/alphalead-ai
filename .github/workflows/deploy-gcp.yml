@@ -32,17 +32,30 @@ jobs:
 
       - name: Upload source and submit build
         run: |
-          set -e
+          set +e
           gcloud config set project alphalead-ai
           echo "=== Creating source tarball ==="
           tar -czf /tmp/source.tar.gz --exclude=.git --exclude=node_modules .
           echo "=== Uploading source to GCS ==="
-          gsutil cp /tmp/source.tar.gz gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz
+          gsutil cp /tmp/source.tar.gz gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::GCS upload failed"
+            exit 1
+          fi
           echo "=== Installing pyyaml ==="
-          pip install pyyaml
+          python3 -m pip install pyyaml 2>&1 || pip3 install pyyaml 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to install pyyaml"
+            exit 1
+          fi
           echo "=== Submitting Cloud Build via API ==="
           export GCP_PROJECT_ID=alphalead-ai
           export GCS_SOURCE=gs://alphalead-ai-build-source/source-$GITHUB_SHA.tar.gz
           export VERSION=$GITHUB_SHA
           export GCP_ACCESS_TOKEN=$(gcloud auth print-access-token)
-          python3 scripts/submit-build.py
+          python3 scripts/submit-build.py 2>&1
+          STATUS=$?
+          if [ $STATUS -ne 0 ]; then
+            echo "::error::Python build script failed (exit $STATUS)"
+            exit 1
+          fi
