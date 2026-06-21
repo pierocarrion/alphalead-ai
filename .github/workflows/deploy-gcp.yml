@@ -30,26 +30,19 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Upload source and submit build
+      - name: Submit Cloud Build
         run: |
           set +e
           gcloud config set project alphalead-ai
-          echo "=== Test: direct API call ==="
-          TOKEN=$(gcloud auth print-access-token)
-          API_OUT=$(curl -s -X POST "https://cloudbuild.googleapis.com/v1/projects/alphalead-ai/builds" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"steps":[{"name":"busybox","args":["echo","hello world"]}],"options":{"logging":"CLOUD_LOGGING_ONLY"}}' 2>&1)
-          echo "$API_OUT"
-          if echo "$API_OUT" | grep -q "error"; then
-            echo "::error::Cloud Build API error: $API_OUT"
-          fi
-          echo "=== Test: gcloud builds submit --no-source ==="
-          OUTPUT=$(gcloud builds submit --no-source --config=cloudbuild.yaml --project=alphalead-ai --substitutions=_VERSION=$GITHUB_SHA 2>&1)
+          OUTPUT=$(gcloud builds submit . \
+            --config=cloudbuild.yaml \
+            --project=alphalead-ai \
+            --gcs-source-staging-dir=gs://alphalead-ai-build-source/source \
+            --substitutions=_VERSION=$GITHUB_SHA 2>&1)
           STATUS=$?
           echo "$OUTPUT"
           if [ $STATUS -ne 0 ]; then
-            MSG=$(echo "$OUTPUT" | tail -10 | tr '\n' ' ' | sed 's/|/ /g')
+            MSG=$(echo "$OUTPUT" | tail -15 | tr '\n' ' ' | sed 's/|/ /g')
             echo "::error::Build submit failed (exit $STATUS): $MSG"
             exit 1
           fi
