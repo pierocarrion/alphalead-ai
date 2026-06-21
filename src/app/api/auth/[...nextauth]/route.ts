@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { SignUpUser, signUpUserSchema } from "@/features/auth/application/use-cases/SignUpUser";
 import { container } from "@/server/lib/container";
+import { isPrismaConnectionError } from "@/server/lib/auth";
 
 const signUpUser = new SignUpUser(container.userRepository);
 
@@ -46,6 +47,10 @@ export const authOptions: NextAuthOptions = {
           if (!valid) return null;
           return { id: existing.id, email: existing.email, name: existing.name };
         } catch (error) {
+          if (isPrismaConnectionError(error)) {
+            console.error("[auth] service unavailable:", error);
+            return null;
+          }
           console.error("[auth] authorize error:", error);
           return null;
         }
