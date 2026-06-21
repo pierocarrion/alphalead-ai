@@ -29,7 +29,7 @@ steps:
         PROXY_PID=$!
         echo "Waiting for Cloud SQL proxy..."
         sleep 8
-        export DATABASE_URL="$$(echo "$$DATABASE_URL" | sed -E 's|@/|@localhost:5432/|; s|\?host=[^&]*||')"
+        export DATABASE_URL="$$(echo "$$DATABASE_URL" | sed -E 's|@/|@localhost:5432/|; s|\?.*||; s|$$|?schema=public|')"
         echo "DATABASE_URL host: $$(echo "$$DATABASE_URL" | sed -E 's|.*@([^/:]+).*|\1|')"
         npm ci --ignore-scripts
         npx prisma migrate deploy

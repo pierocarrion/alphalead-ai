@@ -21,7 +21,7 @@ steps:
         sleep 8
         # Rewrite DATABASE_URL: replace socket-path host with localhost:5432
         # Handles: postgresql://user:pass@/db?host=/cloudsql/...  ->  ...@localhost:5432/db
-        export DATABASE_URL="$$(echo "$$DATABASE_URL" | sed -E 's|@/|@localhost:5432/|; s|\?host=[^&]*||')"
+        export DATABASE_URL="$$(echo "$$DATABASE_URL" | sed -E 's|@/|@localhost:5432/|; s|\?.*||; s|$$|?schema=public|')"
         echo "DATABASE_URL host: $$(echo "$$DATABASE_URL" | sed -E 's|.*@([^/:]+).*|\1|')"
         npm ci --ignore-scripts
         npx prisma migrate deploy
