@@ -58,8 +58,8 @@ images:
 substitutions:
   _REGION: us-central1
   _REPO: motiva
-  _SERVICE: alphateam-staging
-  _DB_INSTANCE: motiva-db
+  _SERVICE: alphateam
+  _DB_INSTANCE: alphateam-db
   _DB_SECRET: database-url
   _AUTH_SECRET: nextauth-secret
   _STRIPE_SECRET: stripe-secret-key
@@ -67,7 +67,7 @@ substitutions:
   _STRIPE_PUBLIC: stripe-public-key
   _STRIPE_PRICE_TEAM: stripe-price-team
   _STRIPE_PRICE_BUSINESS: stripe-price-business
-  _NEXTAUTH_URL: https://alphateam-staging-lql5h6aova-uc.a.run.app
+  _NEXTAUTH_URL: https://alphateam-lql5h6aova-uc.a.run.app
   _VERTEX_LOCATION: us-central1
   _GEMINI_MODEL: gemini-2.5-flash-preview-05-20
   _VERSION: latest

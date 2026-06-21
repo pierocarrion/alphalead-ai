@@ -8,14 +8,14 @@ set -euo pipefail
 
 PROJECT_ID="alphalead-ai"
 REGION="us-central1"
-DB_INSTANCE="motiva-db"
-DB_NAME="motiva"
-DB_USER="motiva"
+DB_INSTANCE="alphateam-db"
+DB_NAME="alphateam"
+DB_USER="alphateam"
 DB_PASSWORD="${DB_PASSWORD:-$(openssl rand -base64 24)}"
 SERVICE_ACCOUNT="cloud-run-motiva"
-SERVICE_NAME="alphateam-staging"
+SERVICE_NAME="alphateam"
 
-echo "=== GCP setup for Motiva AI ==="
+echo "=== GCP setup for AlphaTeam AI ==="
 echo "Project: $PROJECT_ID"
 echo "Region:  $REGION"
 echo ""
@@ -41,7 +41,7 @@ echo "Creating Artifact Registry repository..."
 gcloud artifacts repositories create motiva \
   --repository-format=docker \
   --location="$REGION" \
-  --description="Motiva AI container images" || true
+  --description="AlphaTeam AI container images" || true
 
 # 4. Create Cloud SQL PostgreSQL instance
 echo "Creating Cloud SQL PostgreSQL instance..."
@@ -77,7 +77,7 @@ echo -n "$NEXTAUTH_SECRET" | gcloud secrets create nextauth-secret --data-file=-
 # 6. Create Cloud Run service account
 echo "Creating Cloud Run service account..."
 gcloud iam service-accounts create "$SERVICE_ACCOUNT" \
-  --display-name="Motiva Cloud Run" || true
+  --display-name="AlphaTeam Cloud Run" || true
 
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
 
