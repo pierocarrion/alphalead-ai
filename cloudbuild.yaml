@@ -17,8 +17,8 @@ steps:
         npm ci --ignore-scripts
         npx prisma migrate deploy
         MIGRATE_STATUS=$?
-        kill $PROXY_PID || true
-        exit $MIGRATE_STATUS
+        kill $$PROXY_PID || true
+        exit $$MIGRATE_STATUS
     secretEnv: ["DATABASE_URL"]
 
   # Build and push the container image to Google Artifact Registry
