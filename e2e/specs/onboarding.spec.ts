@@ -13,6 +13,14 @@ test.describe("Onboarding", () => {
 
     await expect(page).toHaveURL("/onboarding");
 
+    const rail = page.getByTestId("onboarding-rail");
+    const vw = page.viewportSize()?.width ?? 0;
+    if (vw >= 1024) {
+      await expect(rail).toBeVisible();
+    } else {
+      await expect(rail).not.toBeVisible();
+    }
+
     await page.getByText("I build / make").click();
     await page.getByRole("button", { name: /continue/i }).click();
 
