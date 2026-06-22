@@ -75,6 +75,7 @@ async function main() {
       data: {
         name: "Acme",
         slug: "acme",
+        hashtag: "#acme",
         memberships: {
           create: users.map((u) => ({ userId: u.id, role: "member" })),
         },
