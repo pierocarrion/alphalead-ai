@@ -2,6 +2,7 @@ import { prisma } from "@/server/lib/prisma";
 import {
   CreateProjectInput,
   IProjectRepository,
+  KnowledgeBaseItem,
   KnowledgeSeedItem,
   RequestToJoinInput,
   UpdateProjectInput,
@@ -40,6 +41,27 @@ function toProject(row: {
     category: row.category,
     emoji: row.emoji,
     teamSize: row.teamSize,
+    createdAt: row.createdAt,
+  };
+}
+
+function toKnowledgeBaseItem(row: {
+  id: string;
+  workspaceId: string;
+  title: string;
+  content: string;
+  sourceApp: string | null;
+  sourceUrl: string | null;
+  validatedByLlmAt: Date | null;
+  createdAt: Date;
+}): KnowledgeBaseItem {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    title: row.title,
+    content: row.content,
+    sourceApp: row.sourceApp,
+    sourceUrl: row.sourceUrl,
     createdAt: row.createdAt,
   };
 }
@@ -392,5 +414,53 @@ export class PrismaProjectRepository implements IProjectRepository {
       create: { workspaceId, userId, role: "member" },
       update: {},
     });
+  }
+
+  async listKnowledge(workspaceId: string): Promise<KnowledgeBaseItem[]> {
+    const rows = await prisma.knowledgeBaseItem.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map(toKnowledgeBaseItem);
+  }
+
+  async addKnowledge(
+    workspaceId: string,
+    item: { title: string; content: string; sourceUrl?: string }
+  ): Promise<KnowledgeBaseItem> {
+    const row = await prisma.knowledgeBaseItem.create({
+      data: {
+        workspaceId,
+        title: item.title.trim(),
+        content: item.content.trim(),
+        sourceUrl: item.sourceUrl?.trim() || null,
+      },
+    });
+    return toKnowledgeBaseItem(row);
+  }
+
+  async updateKnowledge(
+    id: string,
+    patch: {
+      title?: string;
+      content?: string;
+      sourceUrl?: string | null;
+    }
+  ): Promise<KnowledgeBaseItem> {
+    const data: Record<string, unknown> = {};
+    if (typeof patch.title === "string") data.title = patch.title.trim();
+    if (typeof patch.content === "string") data.content = patch.content.trim();
+    if (patch.sourceUrl !== undefined) {
+      data.sourceUrl = patch.sourceUrl?.trim() || null;
+    }
+    const row = await prisma.knowledgeBaseItem.update({
+      where: { id },
+      data,
+    });
+    return toKnowledgeBaseItem(row);
+  }
+
+  async deleteKnowledge(id: string): Promise<void> {
+    await prisma.knowledgeBaseItem.delete({ where: { id } });
   }
 }

@@ -12,6 +12,22 @@ export interface KnowledgeSeedItem {
   sourceUrl?: string;
 }
 
+export interface KnowledgeBaseItem {
+  id: string;
+  workspaceId: string;
+  title: string;
+  content: string;
+  sourceApp: string | null;
+  sourceUrl: string | null;
+  createdAt: Date;
+}
+
+export interface UpdateKnowledgeInput {
+  title?: string;
+  content?: string;
+  sourceUrl?: string | null;
+}
+
 export interface CreateProjectInput {
   name: string;
   slug: string;
@@ -65,4 +81,14 @@ export interface IProjectRepository {
   ): Promise<JoinRequest>;
   findOrCreateCommunity(): Promise<Project>;
   addMember(workspaceId: string, userId: string): Promise<void>;
+  listKnowledge(workspaceId: string): Promise<KnowledgeBaseItem[]>;
+  addKnowledge(
+    workspaceId: string,
+    item: { title: string; content: string; sourceUrl?: string }
+  ): Promise<KnowledgeBaseItem>;
+  updateKnowledge(
+    id: string,
+    patch: UpdateKnowledgeInput
+  ): Promise<KnowledgeBaseItem>;
+  deleteKnowledge(id: string): Promise<void>;
 }

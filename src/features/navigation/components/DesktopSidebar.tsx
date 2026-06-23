@@ -220,6 +220,18 @@ export function DesktopSidebar({
                 </span>
               ) : null}
             </SideRow>
+            <SideRow href="/knowledge" active={pathname === "/knowledge"}>
+              <Icon
+                name="doc"
+                size={16}
+                color={
+                  pathname === "/knowledge"
+                    ? "var(--color-accent)"
+                    : "var(--color-ink-3)"
+                }
+              />
+              Base de conocimiento
+            </SideRow>
             <SideRow
               href="/project/settings"
               active={pathname === "/project/settings"}
