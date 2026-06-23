@@ -19,7 +19,10 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
 
   const body = await parseBody(request);
-  const callbackUrl = sanitizeCallbackUrl(body?.callbackUrl, new URL(request.url).origin);
+  const callbackUrl = sanitizeCallbackUrl(
+    body?.callbackUrl,
+    resolveOrigin(request)
+  );
 
   const cookieStore = await cookies();
   cookieStore.set({
@@ -48,4 +51,29 @@ function sanitizeCallbackUrl(raw: unknown, origin: string): string {
   if (typeof raw !== "string" || !raw.startsWith("/")) return "/settings";
   // Only allow same-origin relative paths.
   return `${origin}${raw}`;
+}
+
+/**
+ * Resolves the public origin of the request.
+ *
+ * Behind Firebase Hosting -> Cloud Run, `request.url` is the *internal*
+ * container URL (e.g. https://localhost:8080), so we must trust the
+ * canonical `NEXTAUTH_URL` env var first, then the proxy headers, and only
+ * fall back to `request.url` as a last resort.
+ */
+function resolveOrigin(request: Request): string {
+  const envUrl = process.env.NEXTAUTH_URL;
+  if (envUrl) {
+    try {
+      return new URL(envUrl).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  const proto = request.headers.get("x-forwarded-proto");
+  const host = request.headers.get("x-forwarded-host");
+  if (host) {
+    return `${proto === "https" ? "https" : "http"}://${host}`;
+  }
+  return new URL(request.url).origin;
 }
