@@ -17,8 +17,9 @@ export async function recordRitualCompletion(opts: {
   ritualId: string;
   taskId?: string | null;
   durationSec?: number;
+  workspaceId?: string;
 }): Promise<RitualCompletionResult> {
-  const { userId, ritualId, taskId, durationSec } = opts;
+  const { userId, ritualId, taskId, durationSec, workspaceId } = opts;
   const now = new Date();
 
   let estimatedMinutes: number | null = null;
@@ -50,14 +51,18 @@ export async function recordRitualCompletion(opts: {
     ],
   });
 
-  const membership = await prisma.membership.findFirst({
-    where: { userId },
-    select: { workspaceId: true },
-  });
-  if (membership) {
+  const resolvedWorkspaceId = workspaceId
+    ? workspaceId
+    : (
+        await prisma.membership.findFirst({
+          where: { userId },
+          select: { workspaceId: true },
+        })
+      )?.workspaceId;
+  if (resolvedWorkspaceId) {
     await prisma.teamMetric.create({
       data: {
-        workspaceId: membership.workspaceId,
+        workspaceId: resolvedWorkspaceId,
         date: now,
         type: "recovered_minutes",
         value: recoveredMinutes,

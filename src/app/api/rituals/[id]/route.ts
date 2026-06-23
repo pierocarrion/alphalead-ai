@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 import { requireUser } from "@/server/lib/auth";
 import { recordRitualCompletion } from "@/server/lib/metrics";
@@ -55,11 +56,13 @@ export async function PATCH(
     }
 
     if (justCompleted) {
+      const { active } = await getActiveWorkspace(user.id);
       const result = await recordRitualCompletion({
         userId: user.id,
         ritualId: id,
         taskId: existing.taskId,
         durationSec: existing.durationSec,
+        workspaceId: active?.workspaceId,
       });
       recoveredMinutes = result.recoveredMinutes;
     }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/server/lib/prisma";
 import { getStripe, getPriceId } from "@/server/lib/stripe";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 import { requireUser } from "@/server/lib/auth";
 
@@ -16,24 +17,15 @@ export async function POST(request: Request) {
     if (auth.response) return auth.response;
     const user = auth.user;
 
-    const fullUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: { memberships: { include: { workspace: true } } },
-    });
-    if (!fullUser) {
-      return NextResponse.json(
-        { error: "We couldn't find your account. Please sign in again." },
-        { status: 404 }
-      );
-    }
-
-    const membership = fullUser.memberships[0];
-    if (!membership) {
+    const { active } = await getActiveWorkspace(user.id);
+    if (!active) {
       return NextResponse.json(
         { error: "You need a workspace before upgrading. Please set one up first." },
         { status: 400 }
       );
     }
+
+    const workspaceId = active.workspaceId;
 
     const parsed = bodySchema.safeParse(await parseRequestBody(request));
     if (!parsed.success) {
@@ -48,21 +40,21 @@ export async function POST(request: Request) {
 
     // Upsert Stripe customer for the workspace.
     const subscription = await prisma.workspaceSubscription.findUnique({
-      where: { workspaceId: membership.workspaceId },
+      where: { workspaceId },
     });
 
     let customerId = subscription?.stripeCustomerId;
     if (!customerId) {
       const customer = await getStripe().customers.create({
         email: user.email ?? undefined,
-        metadata: { workspaceId: membership.workspaceId },
+        metadata: { workspaceId },
       });
       customerId = customer.id;
 
       await prisma.workspaceSubscription.upsert({
-        where: { workspaceId: membership.workspaceId },
+        where: { workspaceId },
         create: {
-          workspaceId: membership.workspaceId,
+          workspaceId,
           stripeCustomerId: customerId,
           plan: "free",
           status: "active",
@@ -77,7 +69,7 @@ export async function POST(request: Request) {
       line_items: [{ price: getPriceId(plan), quantity: 1 }],
       success_url: `${returnUrl}?stripe=success`,
       cancel_url: `${returnUrl}?stripe=cancel`,
-      metadata: { workspaceId: membership.workspaceId, plan },
+      metadata: { workspaceId, plan },
     });
 
     return NextResponse.json({ url: checkoutSession.url });

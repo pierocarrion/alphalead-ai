@@ -81,6 +81,7 @@ model UserProfile {
   gentleCheckIns Boolean @default(true)
   pairStartInvites Boolean @default(true)
   quietMode   Boolean  @default(false)
+  lastActiveWorkspaceId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

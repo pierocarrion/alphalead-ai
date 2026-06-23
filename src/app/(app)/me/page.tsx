@@ -1,8 +1,10 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { sumRecoveredMinutesThisWeek } from "@/server/lib/metrics";
 import { HubRow, Button } from "@/shared/ui";
+import { WorkspaceSwitcher } from "@/features/navigation/components/WorkspaceSwitcher";
 
 export default async function MePage() {
   const session = await getServerSession(authOptions);
@@ -10,6 +12,10 @@ export default async function MePage() {
     where: { email: session?.user?.email ?? "" },
     include: { profile: true },
   });
+
+  const activeState = user ? await getActiveWorkspace(user.id) : null;
+  const active = activeState?.active ?? null;
+  const memberships = activeState?.memberships ?? [];
 
   const warm = user?.profile?.tone === "balanced" ? false : true;
 
@@ -23,6 +29,24 @@ export default async function MePage() {
       <div className="h-[58px] flex-none lg:hidden" />
       <div className="flex-1 overflow-y-auto scrollbar-hide px-[18px] pb-4 lg:max-w-3xl lg:mx-auto">
         <div className="stagger flex flex-col gap-3.5">
+          {/* Project switcher (mobile-friendly) */}
+          {active && (
+            <div className="lg:hidden">
+              <WorkspaceSwitcher
+                workspaces={memberships.map((m) => ({
+                  id: m.workspace.id,
+                  name: m.workspace.name,
+                  emoji: m.workspace.emoji,
+                  hashtag: m.workspace.hashtag,
+                }))}
+                activeId={active.workspaceId}
+                activeName={active.workspaceName}
+                activeEmoji={active.workspaceEmoji}
+                activeHashtag={active.workspaceHashtag}
+              />
+            </div>
+          )}
+
           {/* Recovered highlight */}
           <div
             className="relative overflow-hidden rounded-[24px] border border-line-2 p-5"

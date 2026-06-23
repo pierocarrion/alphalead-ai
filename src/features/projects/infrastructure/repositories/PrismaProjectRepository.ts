@@ -4,6 +4,7 @@ import {
   IProjectRepository,
   KnowledgeSeedItem,
   RequestToJoinInput,
+  UpdateProjectInput,
 } from "../../domain/repositories/IProjectRepository";
 import { Project, ProjectSummary } from "../../domain/entities/Project";
 import {
@@ -75,6 +76,11 @@ export class PrismaProjectRepository implements IProjectRepository {
     return row ? toProject(row) : null;
   }
 
+  async findById(id: string): Promise<Project | null> {
+    const row = await prisma.workspace.findUnique({ where: { id } });
+    return row ? toProject(row) : null;
+  }
+
   async search(query: string): Promise<ProjectSummary[]> {
     const q = query.trim().toLowerCase();
     const where = q
@@ -113,6 +119,50 @@ export class PrismaProjectRepository implements IProjectRepository {
       memberCount: r._count.memberships,
       leaderName: r.memberships[0]?.user.name ?? null,
     }));
+  }
+
+  async listForUser(userId: string): Promise<ProjectSummary[]> {
+    const rows = await prisma.workspace.findMany({
+      where: { memberships: { some: { userId } } },
+      orderBy: { createdAt: "asc" },
+      include: {
+        memberships: {
+          where: { role: { in: ["leader", "admin"] } },
+          include: { user: { select: { name: true } } },
+          take: 1,
+        },
+        _count: { select: { memberships: true } },
+      },
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      hashtag: r.hashtag,
+      emoji: r.emoji,
+      description: r.description,
+      industry: r.industry,
+      category: r.category,
+      memberCount: r._count.memberships,
+      leaderName: r.memberships[0]?.user.name ?? null,
+    }));
+  }
+
+  async update(id: string, input: UpdateProjectInput): Promise<Project> {
+    const data: Record<string, unknown> = {};
+    if (typeof input.name === "string") data.name = input.name.trim();
+    if (input.description !== undefined)
+      data.description = input.description?.trim() || null;
+    if (input.industry !== undefined) data.industry = input.industry || null;
+    if (input.category !== undefined) data.category = input.category || null;
+    if (input.teamSize !== undefined) data.teamSize = input.teamSize || null;
+    if (typeof input.emoji === "string") data.emoji = input.emoji;
+
+    const updated = await prisma.workspace.update({
+      where: { id },
+      data,
+    });
+    return toProject(updated);
   }
 
   async isMember(userId: string, workspaceId: string): Promise<boolean> {

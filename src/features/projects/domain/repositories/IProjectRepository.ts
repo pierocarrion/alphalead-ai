@@ -26,6 +26,15 @@ export interface CreateProjectInput {
   goal?: { title: string; milestone?: string } | null;
 }
 
+export interface UpdateProjectInput {
+  name?: string;
+  description?: string | null;
+  industry?: string | null;
+  category?: string | null;
+  emoji?: string;
+  teamSize?: string | null;
+}
+
 export interface RequestToJoinInput {
   workspaceId: string;
   userId: string;
@@ -34,7 +43,10 @@ export interface RequestToJoinInput {
 
 export interface IProjectRepository {
   findByHashtag(hashtag: string): Promise<Project | null>;
+  findById(id: string): Promise<Project | null>;
   search(query: string): Promise<ProjectSummary[]>;
+  listForUser(userId: string): Promise<ProjectSummary[]>;
+  update(id: string, input: UpdateProjectInput): Promise<Project>;
   isMember(userId: string, workspaceId: string): Promise<boolean>;
   hasOpenRequest(userId: string, workspaceId: string): Promise<boolean>;
   create(input: CreateProjectInput): Promise<Project>;

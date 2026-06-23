@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
 import { Avatar } from "@/shared/ui";
 import { ChatMessageData } from "./ChatMessage";
@@ -19,6 +20,20 @@ export function DesktopMessage({ message, highlight, isYou }: DesktopMessageProp
     ? message.who.charAt(0).toUpperCase() + message.who.slice(1)
     : "Mira";
 
+  const profileHref = message.userId ? `/profile/${message.userId}` : null;
+  const nameNode = isYou ? (
+    <span className="text-[14.5px] font-bold text-ink">{name}</span>
+  ) : profileHref ? (
+    <Link
+      href={profileHref}
+      className="text-[14.5px] font-bold text-ink hover:underline"
+    >
+      {name}
+    </Link>
+  ) : (
+    <span className="text-[14.5px] font-bold text-ink">{name}</span>
+  );
+
   return (
     <div
       className={cn(
@@ -26,10 +41,15 @@ export function DesktopMessage({ message, highlight, isYou }: DesktopMessageProp
         highlight ? "bg-glow-soft" : "bg-transparent"
       )}
     >
-      <Avatar who={message.who || "daniel"} size={38} className="mt-0.5" />
+      <Avatar
+        who={message.who || "daniel"}
+        size={38}
+        className="mt-0.5"
+        href={isYou ? null : profileHref}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="text-[14.5px] font-bold text-ink">{name}</span>
+          {nameNode}
           <span className="text-xs text-ink-3">{message.time}</span>
         </div>
         <div className="mt-0.5 text-[15px] leading-relaxed text-ink-2">

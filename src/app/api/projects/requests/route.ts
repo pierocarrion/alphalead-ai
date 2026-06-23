@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/server/lib/auth";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { container } from "@/server/lib/container";
 import { jsonError } from "@/server/lib/apiErrors";
 import { ListPendingRequests } from "@/features/projects/application/use-cases/ListPendingRequests";
@@ -11,8 +12,11 @@ export async function GET() {
     const auth = await requireUser();
     if (auth.response) return auth.response;
 
+    const { active } = await getActiveWorkspace(auth.user.id);
+
     const requests = await listPendingRequests.execute({
       leaderUserId: auth.user.id,
+      workspaceId: active?.workspaceId,
     });
 
     return NextResponse.json({ requests });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { z } from "zod";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { memberships: { take: 1 } },
+      select: { id: true },
     });
     if (!user) {
       return NextResponse.json(
@@ -42,10 +43,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const membership = user.memberships[0];
+    const { active } = await getActiveWorkspace(user.id);
     const feedback = await prisma.feedback.create({
       data: {
-        workspaceId: membership?.workspaceId ?? null,
+        workspaceId: active?.workspaceId ?? null,
         userId: user.id,
         type: parsed.data.type,
         content: parsed.data.content,

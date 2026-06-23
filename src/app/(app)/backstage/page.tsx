@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { computeLoadBalance } from "@/server/lib/metrics";
 import { personIdFromName } from "@/shared/lib/person";
 import { Avatar, Button, Icon } from "@/shared/ui";
@@ -69,28 +70,30 @@ export default async function BackstagePage() {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { memberships: true },
+    select: { id: true },
   });
   if (!user) redirect("/login");
 
-  const membership = user.memberships[0];
+  const { active } = await getActiveWorkspace(user.id);
   if (
-    !membership ||
-    (membership.role !== "leader" && membership.role !== "admin")
+    !active ||
+    (active.role !== "leader" && active.role !== "admin")
   ) {
     redirect("/home");
   }
+
+  const workspaceId = active.workspaceId;
 
   const [tasks, load] = await Promise.all([
     prisma.task.findMany({
       where: {
         status: "open",
-        user: { memberships: { some: { workspaceId: membership.workspaceId } } },
+        user: { memberships: { some: { workspaceId } } },
       },
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    computeLoadBalance(membership.workspaceId),
+    computeLoadBalance(workspaceId),
   ]);
 
   const rows = tasks.map(toBackstageTask);

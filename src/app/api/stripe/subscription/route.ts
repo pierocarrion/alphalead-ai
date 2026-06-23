@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { jsonError } from "@/server/lib/apiErrors";
 
 export async function GET() {
@@ -16,7 +17,7 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { memberships: { include: { workspace: { include: { subscriptions: true } } } } },
+      select: { id: true },
     });
     if (!user) {
       return NextResponse.json(
@@ -25,11 +26,12 @@ export async function GET() {
       );
     }
 
-    const membership = user.memberships[0];
-    const subscription = membership?.workspace.subscriptions[0] ?? {
-      plan: "free",
-      status: "active",
-    };
+    const { active } = await getActiveWorkspace(user.id);
+    const subscription = active
+      ? ((await prisma.workspaceSubscription.findUnique({
+          where: { workspaceId: active.workspaceId },
+        })) ?? { plan: "free", status: "active" })
+      : { plan: "free", status: "active" };
 
     return NextResponse.json({ subscription });
   } catch (error) {

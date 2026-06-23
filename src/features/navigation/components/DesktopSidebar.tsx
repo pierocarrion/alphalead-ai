@@ -5,9 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/shared/lib/cn";
-import { Avatar, Icon, Mira } from "@/shared/ui";
+import { Avatar, Icon } from "@/shared/ui";
 import { fetchJson } from "@/shared/lib/api";
 import { personIdFromName } from "@/shared/lib/person";
+import {
+  WorkspaceSwitcher,
+  type SwitcherWorkspace,
+} from "./WorkspaceSwitcher";
 
 export interface SidebarChannel {
   id: string;
@@ -19,13 +23,18 @@ export interface SidebarMember {
   name: string;
 }
 
+export type SidebarWorkspace = SwitcherWorkspace;
+
 interface DesktopSidebarProps {
+  workspaceId: string;
   workspaceName: string;
   workspaceEmoji?: string | null;
   workspaceHashtag?: string | null;
   channels: SidebarChannel[];
   members: SidebarMember[];
   dmByPeer: Record<string, string>;
+  workspaces: SidebarWorkspace[];
+  currentUserId: string;
   userName: string;
   userRole: string;
   showBackstage: boolean;
@@ -63,12 +72,15 @@ function SideLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function DesktopSidebar({
+  workspaceId,
   workspaceName,
   workspaceEmoji,
   workspaceHashtag,
   channels,
   members,
   dmByPeer,
+  workspaces,
+  currentUserId,
   userName,
   userRole,
   showBackstage,
@@ -104,25 +116,22 @@ export function DesktopSidebar({
 
   return (
     <aside className="hidden w-[244px] flex-none flex-col border-r border-line bg-bg-2 lg:flex">
-      {/* Workspace header */}
-      <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-[18px] pb-3.5">
-        <Mira size={30} mood="calm" />
-        <div className="min-w-0">
-          <div className="truncate font-display text-base text-ink">
-            {workspaceEmoji ? `${workspaceEmoji} ` : ""}
-            {workspaceName}
-          </div>
-          <div className="truncate text-[11px] text-ink-3">
-            {workspaceHashtag ?? "proyecto"} · espacio
-          </div>
-        </div>
+      {/* Workspace header (switcher) */}
+      <div className="border-b border-line px-2.5 py-2.5">
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          activeId={workspaceId}
+          activeName={workspaceName}
+          activeEmoji={workspaceEmoji}
+          activeHashtag={workspaceHashtag}
+        />
       </div>
 
       {/* Nav */}
       <div className="flex-1 overflow-y-auto px-2.5 py-3.5">
-        <SideLabel>Channels</SideLabel>
+        <SideLabel>Canales</SideLabel>
         {channels.length === 0 && (
-          <p className="px-2.5 pb-1 text-xs text-ink-3">No channels yet.</p>
+          <p className="px-2.5 pb-1 text-xs text-ink-3">Sin canales aún.</p>
         )}
         {channels.map((c) => (
           <SideRow
@@ -135,9 +144,23 @@ export function DesktopSidebar({
         ))}
 
         <div className="h-3.5" />
-        <SideLabel>Direct messages</SideLabel>
+        <SideLabel>Equipo</SideLabel>
+        <SideRow href="/members" active={pathname === "/members"}>
+          <Icon
+            name="people"
+            size={16}
+            color={
+              pathname === "/members"
+                ? "var(--color-accent)"
+                : "var(--color-ink-3)"
+            }
+          />
+          Miembros
+        </SideRow>
         {members.length === 0 && (
-          <p className="px-2.5 pb-1 text-xs text-ink-3">No one else here yet.</p>
+          <p className="px-2.5 pb-1 text-xs text-ink-3">
+            Nadie más por aquí.
+          </p>
         )}
         {members.map((m) => {
           const channelId = dmByPeer[m.id];
@@ -154,7 +177,11 @@ export function DesktopSidebar({
                   : "text-ink-2 hover:bg-white/[0.03]"
               )}
             >
-              <Avatar who={personIdFromName(m.name)} size={20} />
+              <Avatar
+                who={personIdFromName(m.name)}
+                size={20}
+                href={`/profile/${m.id}`}
+              />
               {m.name?.split(" ")[0] ?? "Someone"}
             </button>
           );
@@ -193,12 +220,30 @@ export function DesktopSidebar({
                 </span>
               ) : null}
             </SideRow>
+            <SideRow
+              href="/project/settings"
+              active={pathname === "/project/settings"}
+            >
+              <Icon
+                name="gear"
+                size={16}
+                color={
+                  pathname === "/project/settings"
+                    ? "var(--color-accent)"
+                    : "var(--color-ink-3)"
+                }
+              />
+              Ajustes del proyecto
+            </SideRow>
           </>
         )}
       </div>
 
-      {/* User footer */}
-      <div className="flex items-center gap-2.5 border-t border-line px-3.5 py-3">
+      {/* User footer (clickable profile) */}
+      <Link
+        href={`/profile/${currentUserId}`}
+        className="flex items-center gap-2.5 border-t border-line px-3.5 py-3 transition-colors hover:bg-white/[0.03]"
+      >
         <Avatar who={selfPersonId} size={30} />
         <div className="flex-1 min-w-0">
           <div className="truncate text-[13.5px] font-bold text-ink">
@@ -207,7 +252,7 @@ export function DesktopSidebar({
           <div className="text-[11px] text-ink-3">{roleLabel}</div>
         </div>
         <Icon name="bell" size={17} color="var(--color-ink-3)" />
-      </div>
+      </Link>
     </aside>
   );
 }

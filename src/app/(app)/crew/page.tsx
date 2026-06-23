@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
 import { computeLoadBalance, computeWorkspaceMood } from "@/server/lib/metrics";
 import { personIdFromName } from "@/shared/lib/person";
 import { CrewClient } from "./CrewClient";
@@ -13,29 +14,24 @@ export default async function CrewPage() {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: {
-      profile: true,
-      memberships: {
-        include: {
-          workspace: {
-            include: {
-              memberships: { include: { user: { select: { id: true, name: true } } } },
-              goals: {
-                include: { milestones: { orderBy: { dueDate: "asc" } } },
-                take: 1,
-              },
-            },
-          },
-        },
-      },
-    },
+    include: { profile: true },
   });
   if (!user) redirect("/login");
 
-  const membership = user.memberships[0];
-  if (!membership) redirect("/setup");
+  const { active } = await getActiveWorkspace(user.id);
+  if (!active) redirect("/setup");
 
-  const workspace = membership.workspace;
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: active.workspaceId },
+    include: {
+      memberships: { include: { user: { select: { id: true, name: true } } } },
+      goals: {
+        include: { milestones: { orderBy: { dueDate: "asc" } } },
+        take: 1,
+      },
+    },
+  });
+  if (!workspace) redirect("/setup");
 
   const warm = user.profile?.tone === "balanced" ? false : true;
 

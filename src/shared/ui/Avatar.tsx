@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
 
 export type PersonId = string;
@@ -55,14 +56,16 @@ interface AvatarProps {
   size?: number;
   className?: string;
   style?: React.CSSProperties;
+  href?: string | null;
 }
 
-export function Avatar({ who, size = 38, className, style }: AvatarProps) {
+export function Avatar({ who, size = 38, className, style, href }: AvatarProps) {
   const person = who ? getPerson(who) : generatePerson("?");
-  return (
+  const inner = (
     <div
       className={cn(
         "flex flex-none items-center justify-center rounded-full font-display font-semibold text-[#1a1620]",
+        href && "transition-transform active:scale-[0.96]",
         className
       )}
       style={{
@@ -76,4 +79,13 @@ export function Avatar({ who, size = 38, className, style }: AvatarProps) {
       {person.initials}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} aria-label={`Ver perfil de ${person.name}`} className="inline-flex">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
 }

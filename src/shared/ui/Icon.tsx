@@ -20,7 +20,11 @@ export type IconName =
   | "shield"
   | "clock"
   | "bell"
-  | "doc";
+  | "doc"
+  | "user"
+  | "people"
+  | "gear"
+  | "chevron";
 
 interface IconProps {
   name: IconName;
@@ -75,6 +79,21 @@ export function Icon({
     ),
     bell: <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0" {...p} />,
     doc: <path d="M7 3h7l4 4v14H7zM14 3v4h4" {...p} />,
+    user: <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" {...p} />,
+    people: (
+      <>
+        <circle cx="9" cy="8" r="3" {...p} />
+        <path d="M3 19c0-3 2.7-5 6-5s6 2 6 5" {...p} />
+        <path d="M16 5.5a3 3 0 0 1 0 5.8M17.5 14.2c2.2.6 3.5 2.3 3.5 4.8" {...p} />
+      </>
+    ),
+    gear: (
+      <>
+        <circle cx="12" cy="12" r="3.2" {...p} />
+        <path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" {...p} />
+      </>
+    ),
+    chevron: <path d="M9 6l6 6-6 6" {...p} />,
   };
 
   return (

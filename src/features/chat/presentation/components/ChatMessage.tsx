@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, getPerson, type PersonId } from "@/shared/ui";
 
 export interface ChatMessageData {
@@ -20,6 +21,7 @@ interface ChatMessageProps {
 export function ChatMessage({ message, highlight, isYou }: ChatMessageProps) {
   const person = getPerson(message.who);
   const you = isYou ?? false;
+  const profileHref = message.userId ? `/profile/${message.userId}` : null;
 
   return (
     <div
@@ -27,11 +29,29 @@ export function ChatMessage({ message, highlight, isYou }: ChatMessageProps) {
         you ? "flex-row-reverse" : "flex-row"
       }`}
     >
-      {!you && <Avatar who={message.who} size={38} className="mt-0.5" />}
+      {!you && (
+        <Avatar
+          who={message.who}
+          size={38}
+          className="mt-0.5"
+          href={profileHref}
+        />
+      )}
       <div className="max-w-[78%]">
         {!you && (
           <div className="mb-1 flex items-baseline gap-2">
-            <span className="text-sm font-bold text-ink">{message.name || person.name}</span>
+            {profileHref ? (
+              <Link
+                href={profileHref}
+                className="text-sm font-bold text-ink hover:underline"
+              >
+                {message.name || person.name}
+              </Link>
+            ) : (
+              <span className="text-sm font-bold text-ink">
+                {message.name || person.name}
+              </span>
+            )}
             <span className="text-xs text-ink-3">{message.time}</span>
           </div>
         )}
