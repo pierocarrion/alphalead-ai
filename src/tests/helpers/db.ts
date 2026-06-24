@@ -68,6 +68,16 @@ export async function getTestPrisma(): Promise<PrismaClient> {
 export async function resetDatabase() {
   const client = await getTestPrisma();
   await client.$transaction([
+    client.projectKpiSnapshot.deleteMany(),
+    client.projectKpi.deleteMany(),
+    client.kpiDefinition.deleteMany(),
+    client.projectAiInsight.deleteMany(),
+    client.projectInvitation.deleteMany(),
+    client.projectMethodology.deleteMany(),
+    client.smartGoalVersion.deleteMany(),
+    client.projectSmartGoal.deleteMany(),
+    client.projectRole.deleteMany(),
+    client.auditLog.deleteMany(),
     client.userMetric.deleteMany(),
     client.teamMetric.deleteMany(),
     client.ritualSession.deleteMany(),

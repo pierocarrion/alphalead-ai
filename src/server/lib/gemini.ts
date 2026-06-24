@@ -309,6 +309,246 @@ Respond with JSON only:
   return generateJSON<CrewMoodAnalysis>(prompt, { maxTokens: 400, temperature: 0.2 });
 }
 
+/* ------------------------------------------------------------------ */
+/* Leader intelligence                                                */
+/* ------------------------------------------------------------------ */
+
+export type MessageClass =
+  | "Normal"
+  | "Important"
+  | "Urgent"
+  | "Risk"
+  | "Blocker"
+  | "Decision";
+
+export interface ClassifiedMessage {
+  classification: MessageClass;
+  intent: string;
+  priority: "Low" | "Medium" | "High";
+}
+
+export async function classifyMessage(
+  text: string
+): Promise<GeminiResponse<ClassifiedMessage>> {
+  const prompt = `You are Mira, a project assistant for a team leader. Classify this chat message.
+
+Message: """${text}"""
+
+Respond with JSON only:
+{
+  "classification": "Normal | Important | Urgent | Risk | Blocker | Decision",
+  "intent": "one short phrase describing what the sender wants",
+  "priority": "Low | Medium | High"
+}
+
+Rules:
+- "Blocker" = sender can't continue (no access, waiting approval, stuck).
+- "Decision" = sender is explicitly asking the leader to approve/decide.
+- "Risk" = signal that delivery is in jeopardy (delay, dependency, scope).
+- "Urgent" = time-sensitive but not a blocker/decision.
+- "Important" = meaningful but not time-critical.
+- "Normal" = chitchat or routine updates.`;
+
+  return generateJSON<ClassifiedMessage>(prompt, {
+    maxTokens: 160,
+    temperature: 0.15,
+  });
+}
+
+export interface ImplicitMention {
+  mentionsLeader: boolean;
+  reason: string;
+}
+
+export async function detectImplicitLeaderMention(
+  text: string,
+  leaderName: string
+): Promise<GeminiResponse<ImplicitMention>> {
+  const prompt = `You detect whether a chat message implicitly references the team leader (not via "@leader" but by intent).
+
+Leader's name: ${leaderName}
+Message: """${text}"""
+
+Respond with JSON only:
+{
+  "mentionsLeader": boolean,
+  "reason": "short phrase if true, otherwise empty"
+}
+
+Set mentionsLeader=true when the message asks the leader to approve, validate, decide, sign off, or unblock — even without naming them.`;
+
+  return generateJSON<ImplicitMention>(prompt, {
+    maxTokens: 120,
+    temperature: 0.15,
+  });
+}
+
+export interface RiskAssessment {
+  riskScore: number; // 0-100
+  level: "low" | "medium" | "high" | "critical";
+  reasons: string[];
+}
+
+export async function scoreProjectRisk(args: {
+  signals: string[];
+  overdueTasks: number;
+  activeBlockers: number;
+  overloadedMembers: number;
+}): Promise<GeminiResponse<RiskAssessment>> {
+  const prompt = `You are a project risk model. Given signals about a sprint, return a risk score.
+
+Overdue tasks: ${args.overdueTasks}
+Active blockers: ${args.activeBlockers}
+Overloaded members: ${args.overloadedMembers}
+
+Signals:
+${args.signals.map((s) => `- ${s}`).join("\n") || "- (none)"}
+
+Respond with JSON only:
+{
+  "riskScore": 0-100,
+  "level": "low | medium | high | critical",
+  "reasons": ["short reason", "..."]
+}
+
+Score guidance: <30 low, 30-55 medium, 55-80 high, >80 critical.`;
+
+  return generateJSON<RiskAssessment>(prompt, {
+    maxTokens: 260,
+    temperature: 0.2,
+  });
+}
+
+export interface AssigneeRecommendation {
+  recommendedUser: string | null;
+  confidence: number; // 0-100
+  reasoning: string;
+}
+
+export async function recommendAssignee(args: {
+  taskTitle: string;
+  candidates: Array<{ name: string; openTasks: number; skills: string[] }>;
+}): Promise<GeminiResponse<AssigneeRecommendation>> {
+  const prompt = `You recommend who should own a task based on skills, current load, and fit.
+
+Task: """${args.taskTitle}"""
+
+Candidates:
+${args.candidates
+  .map(
+    (c) =>
+      `- ${c.name} · open tasks: ${c.openTasks} · skills: ${c.skills.join(", ") || "n/a"}`
+  )
+  .join("\n") || "- (none)"}
+
+Respond with JSON only:
+{
+  "recommendedUser": "name or null",
+  "confidence": 0-100,
+  "reasoning": "one short sentence"
+}
+
+Prefer lower load and matching skills. If no one fits, set recommendedUser to null.`;
+
+  return generateJSON<AssigneeRecommendation>(prompt, {
+    maxTokens: 180,
+    temperature: 0.25,
+  });
+}
+
+export interface DelayPrediction {
+  probabilityDelay: number; // 0-100
+  reasoning: string;
+}
+
+export async function predictTaskDelay(args: {
+  taskTitle: string;
+  ageDays: number;
+  hasDeadline: boolean;
+  daysUntilDeadline: number | null;
+  ownerOpenTasks: number;
+}): Promise<GeminiResponse<DelayPrediction>> {
+  const prompt = `Predict the probability (0-100) that this task will be delivered late.
+
+Task: """${args.taskTitle}"""
+Age (days since creation): ${args.ageDays}
+Has deadline: ${args.hasDeadline}
+Days until deadline: ${args.daysUntilDeadline ?? "n/a"}
+Owner's open tasks right now: ${args.ownerOpenTasks}
+
+Respond with JSON only:
+{
+  "probabilityDelay": 0-100,
+  "reasoning": "one short sentence"
+}`;
+
+  return generateJSON<DelayPrediction>(prompt, {
+    maxTokens: 150,
+    temperature: 0.2,
+  });
+}
+
+export interface LeaderBriefing {
+  headline: string;
+  bullets: string[];
+  needsAttention: string[];
+}
+
+export async function generateLeaderBriefing(args: {
+  leaderName: string;
+  hours: number;
+  events: Array<{ kind: string; detail: string }>;
+}): Promise<GeminiResponse<LeaderBriefing>> {
+  const prompt = `You are Mira, briefing a team leader who just came back after ${args.hours} hours. Distill what happened into a calm, clear summary — no noise, no fear, just signal.
+
+Leader: ${args.leaderName}
+
+Raw events (already filtered, may be empty):
+${args.events.map((e) => `- [${e.kind}] ${e.detail}`).join("\n") || "- (none)"}
+
+Respond with JSON only:
+{
+  "headline": "one warm sentence framing the period",
+  "bullets": ["3-6 concise bullets, grouped by theme, no emojis"],
+  "needsAttention": ["only items that truly need the leader now; empty array if none"]
+}
+
+Drop chitchat and duplicates. Group similar events. Prioritize decisions, blockers, risks and deadlines.`;
+
+  return generateJSON<LeaderBriefing>(prompt, {
+    maxTokens: 420,
+    temperature: 0.3,
+  });
+}
+
+export interface LeaderChatAnswer {
+  answer: string;
+  followUp: string | null;
+}
+
+export async function answerLeaderQuestion(args: {
+  question: string;
+  context: string;
+}): Promise<GeminiResponse<LeaderChatAnswer>> {
+  const prompt = `You are Mira, answering a team leader's question about their project. Be concise and grounded in the provided context. If the context is missing something, say so briefly.
+
+Context:
+${args.context}
+
+Question: """${args.question}"""
+
+Respond with JSON only:
+{
+  "answer": "2-4 sentences max, plain English",
+  "followUp": "one suggested next step, or null"
+}`;
+
+  return generateJSON<LeaderChatAnswer>(prompt, {
+    maxTokens: 260,
+    temperature: 0.3,
+  });
+}
+
 export function geminiDraftToDetectedTaskDraft(
   draft: GeminiTaskDetection,
   originalText: string,

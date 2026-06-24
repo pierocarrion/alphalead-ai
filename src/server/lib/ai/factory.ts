@@ -1,0 +1,71 @@
+import type { IAiProvider, IAiEmbedder } from "./types";
+import { GeminiProvider } from "./providers/GeminiProvider";
+import { OpenAIProvider } from "./providers/OpenAIProvider";
+import { AzureOpenAIProvider } from "./providers/AzureOpenAIProvider";
+import { ClaudeProvider } from "./providers/ClaudeProvider";
+
+export type AiProviderName = "gemini" | "openai" | "azure-openai" | "claude";
+
+/**
+ * Selects the chat/completion provider from `AI_PROVIDER`.
+ * Defaults to "gemini" (the existing Mira engine) to preserve behavior.
+ *
+ * Open/Closed: adding a new vendor = new file + one branch here. Nothing else
+ * in the codebase changes because every consumer depends on {@link IAiProvider}.
+ */
+export function createAiProvider(
+  name: AiProviderName = readProviderName(),
+  override?: ConstructorParameters<typeof GeminiProvider>[0]
+): IAiProvider {
+  switch (name) {
+    case "openai":
+      return new OpenAIProvider(override as ConstructorParameters<typeof OpenAIProvider>[0]);
+    case "azure-openai":
+      return new AzureOpenAIProvider(override as ConstructorParameters<typeof AzureOpenAIProvider>[0]);
+    case "claude":
+      return new ClaudeProvider(override as ConstructorParameters<typeof ClaudeProvider>[0]);
+    case "gemini":
+    default:
+      return new GeminiProvider(override);
+  }
+}
+
+/**
+ * Resolves the embedder independently. Anthropic and (optionally) Azure lack
+ * embeddings, so a separate `AI_EMBEDDING_PROVIDER` (default openai, then
+ * gemini fallback) keeps RAG working regardless of the chat vendor.
+ */
+export function createEmbedder(
+  name?: AiProviderName,
+  env: NodeJS.ProcessEnv = process.env
+): IAiEmbedder {
+  const requested = name ?? (env.AI_EMBEDDING_PROVIDER as AiProviderName | undefined);
+  const candidates: AiProviderName[] = requested
+    ? [requested, "openai", "gemini"]
+    : ["openai", "gemini"];
+
+  for (const candidate of candidates) {
+    const provider = createAiProvider(candidate);
+    if (provider.isEnabled()) {
+      const probe = provider.embed(["__probe__"]);
+      // Sync-enabled providers report isEnabled synchronously; treat as embedder.
+      void probe;
+      return provider;
+    }
+  }
+  // Fall back to gemini (disabled) so callers get a clear friendlyError.
+  return createAiProvider("gemini");
+}
+
+export function readProviderName(env: NodeJS.ProcessEnv = process.env): AiProviderName {
+  const raw = (env.AI_PROVIDER ?? "gemini").toLowerCase();
+  switch (raw) {
+    case "openai":
+    case "azure-openai":
+    case "claude":
+    case "gemini":
+      return raw;
+    default:
+      return "gemini";
+  }
+}

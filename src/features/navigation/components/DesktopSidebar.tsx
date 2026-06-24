@@ -191,6 +191,18 @@ export function DesktopSidebar({
           <>
             <div className="h-3.5" />
             <SideLabel>Coordinación</SideLabel>
+            <SideRow href="/progress" active={pathname === "/progress"}>
+              <Icon
+                name="spark"
+                size={16}
+                color={
+                  pathname === "/progress"
+                    ? "var(--color-accent)"
+                    : "var(--color-ink-3)"
+                }
+              />
+              Progreso
+            </SideRow>
             <SideRow href="/backstage" active={pathname === "/backstage"}>
               <Icon
                 name="shield"
@@ -231,6 +243,33 @@ export function DesktopSidebar({
                 }
               />
               Base de conocimiento
+            </SideRow>
+            <SideRow href="/alpha-space" active={pathname.startsWith("/alpha-space")}>
+              <Icon
+                name="compass"
+                size={16}
+                color={
+                  pathname.startsWith("/alpha-space")
+                    ? "var(--color-accent)"
+                    : "var(--color-glow)"
+                }
+              />
+              Alpha Space
+            </SideRow>
+            <SideRow
+              href="/feedback-intelligence"
+              active={pathname.startsWith("/feedback-intelligence")}
+            >
+              <Icon
+                name="pulse"
+                size={16}
+                color={
+                  pathname.startsWith("/feedback-intelligence")
+                    ? "var(--color-accent)"
+                    : "var(--color-glow)"
+                }
+              />
+              Feedback Intelligence
             </SideRow>
             <SideRow
               href="/project/settings"

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
+import { getActiveWorkspace } from "@/server/lib/activeWorkspace";
+import { buildLeaderBriefing } from "@/server/lib/leaderBriefing";
 import { Mira, Button, Icon } from "@/shared/ui";
+import { LeaderHome } from "./LeaderHome";
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
@@ -11,11 +14,39 @@ export default async function HomePage() {
     include: { profile: true },
   });
 
-  const name = user?.name ?? "you";
-  const warm = user?.profile?.tone === "balanced" ? false : true;
+  const { active } = await getActiveWorkspace(user?.id ?? "");
+  const isLeader = active?.role === "leader" || active?.role === "admin";
 
+  if (isLeader && active && user) {
+    const briefing = await buildLeaderBriefing({
+      workspaceId: active.workspaceId,
+      leaderId: user.id,
+      leaderName: user.name ?? "Leader",
+      sinceHours: 24,
+    });
+    return (
+      <LeaderHome
+        leaderName={user.name ?? "Leader"}
+        workspaceName={active.workspaceName}
+        briefing={briefing}
+      />
+    );
+  }
+
+  return <MemberHome userId={user?.id ?? ""} name={user?.name ?? "you"} warm={user?.profile?.tone !== "balanced"} />;
+}
+
+async function MemberHome({
+  userId,
+  name,
+  warm,
+}: {
+  userId: string;
+  name: string;
+  warm: boolean;
+}) {
   const openTasks = await prisma.task.findMany({
-    where: { userId: user?.id, status: "open" },
+    where: { userId, status: "open" },
     orderBy: { createdAt: "desc" },
     take: 5,
   });

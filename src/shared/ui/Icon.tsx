@@ -25,7 +25,17 @@ export type IconName =
   | "people"
   | "gear"
   | "chevron"
-  | "mic";
+  | "mic"
+  | "compass"
+  | "brain"
+  | "target"
+  | "download"
+  | "lock"
+  | "alert"
+  | "trend"
+  | "grid"
+  | "pulse"
+  | "search";
 
 interface IconProps {
   name: IconName;
@@ -99,6 +109,46 @@ export function Icon({
       <>
         <rect x="9" y="3" width="6" height="11" rx="3" {...p} />
         <path d="M5 11a7 7 0 0 0 14 0M12 18v3" {...p} />
+      </>
+    ),
+    compass: (
+      <>
+        <circle cx="12" cy="12" r="9" {...p} />
+        <path d="M15.5 8.5l-2 5-5 2 2-5z" {...p} />
+      </>
+    ),
+    brain: (
+      <path d="M9 4a2.5 2.5 0 0 0-2.5 2.5A2.5 2.5 0 0 0 5 9a2.2 2.2 0 0 0 .5 3.5A2.5 2.5 0 0 0 7 17a2.5 2.5 0 0 0 5 .5V4.5A2.5 2.5 0 0 0 9 4zM15 4a2.5 2.5 0 0 1 2.5 2.5A2.5 2.5 0 0 1 19 9a2.2 2.2 0 0 1-.5 3.5A2.5 2.5 0 0 1 17 17a2.5 2.5 0 0 1-5 .5" {...p} />
+    ),
+    target: (
+      <>
+        <circle cx="12" cy="12" r="8.5" {...p} />
+        <circle cx="12" cy="12" r="4.5" {...p} />
+        <circle cx="12" cy="12" r="0.6" fill={color} stroke="none" />
+      </>
+    ),
+    download: <path d="M12 3v12M7 11l5 5 5-5M5 20h14" {...p} />,
+    lock: (
+      <>
+        <rect x="5" y="10" width="14" height="10" rx="2.5" {...p} />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" {...p} />
+      </>
+    ),
+    alert: <path d="M12 3l9 16H3zM12 9v5M12 17v.5" {...p} />,
+    trend: <path d="M4 16l5-5 3 3 7-8M16 6h4v4" {...p} />,
+    grid: (
+      <>
+        <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" {...p} />
+        <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" {...p} />
+        <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" {...p} />
+        <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" {...p} />
+      </>
+    ),
+    pulse: <path d="M3 12h4l2-6 4 14 2-8h6" {...p} />,
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" {...p} />
+        <path d="M21 21l-4.5-4.5" {...p} />
       </>
     ),
   };

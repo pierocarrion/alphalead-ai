@@ -60,6 +60,22 @@ const FIELD_HINTS: Record<string, string> = {
   industry: "Elige la industria del proyecto.",
   decision: "Elige si aprobar o rechazar la solicitud.",
   goal: "Escribe el objetivo del proyecto.",
+  goalId: "Elige un objetivo.",
+  question: "Escribe una pregunta para el copiloto.",
+  relevant: "Conecta el objetivo con el propósito.",
+  ownerId: "Elige un responsable.",
+  weight: "Elige un peso válido para el objetivo.",
+  primary: "Elige la metodología principal.",
+  secondary: "Elige metodologías secundarias válidas.",
+  entries: "Revisa la configuración de KPIs.",
+  projectRole: "Elige un rol de proyecto.",
+  permissionRole: "Elige un nivel de permiso.",
+  target: "Define una meta numérica válida.",
+  alertThreshold: "Define un umbral de alerta válido.",
+  specific: "Describe el objetivo de forma específica.",
+  measurable: "Define cómo se medirá el objetivo.",
+  achievable: "Explica por qué el objetivo es alcanzable.",
+  timeBound: "Define el plazo del objetivo.",
 };
 
 function isPrismaKnown(error: unknown): error is PrismaKnownError {
