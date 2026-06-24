@@ -13,6 +13,7 @@ import {
   isMentionedMira,
   maybeCaptureLeaderAnswer,
 } from "@/server/lib/chatKnowledge";
+import { publishRealtime } from "@/server/lib/realtime";
 
 const postSchema = z.object({
   text: z.string().min(1),
@@ -275,6 +276,34 @@ export async function POST(
           console.error("[channels/messages] leader capture error:", err)
         )
       );
+    }
+
+    // Broadcast the new message (and any Mira reply) over the realtime SSE stream
+    // so all connected clients in this workspace update without polling.
+    publishRealtime("message_sent", {
+      workspaceId: channel.workspaceId,
+      channelId: id,
+      messageId: message.id,
+      data: {
+        text: message.content,
+        userId: message.userId,
+        name: message.user.name,
+      },
+    });
+    if (miraReply) {
+      publishRealtime("mira_reply", {
+        workspaceId: channel.workspaceId,
+        channelId: id,
+        messageId: miraReply.id,
+        data: { text: miraReply.text, name: miraReply.name },
+      });
+    }
+    if (detected) {
+      publishRealtime("task_detected", {
+        workspaceId: channel.workspaceId,
+        channelId: id,
+        data: { title: detected.title },
+      });
     }
 
     return NextResponse.json({

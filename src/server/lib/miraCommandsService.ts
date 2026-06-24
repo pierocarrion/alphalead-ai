@@ -9,6 +9,7 @@ import {
   type MiraCommandContext,
   type MiraCommandResult,
 } from "@/features/chat/application/miraCommands";
+import { publishRealtime } from "@/server/lib/realtime";
 
 export interface RunMiraOptions {
   channelId: string;
@@ -96,6 +97,12 @@ export async function runMiraInChannel(opts: RunMiraOptions): Promise<RunMiraOut
     } catch (err) {
       console.error("[runMiraInChannel] persist insight error:", err);
     }
+    // Notify connected clients that a new Mira insight is available.
+    publishRealtime("mira_insight", {
+      workspaceId: ctx.workspaceId,
+      channelId: opts.channelId,
+      data: { type: parsed.command, usedAi: result.usedAi },
+    });
   }
 
   // For the "tasks" command, also create real Task rows from the analysis so
