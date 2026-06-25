@@ -5,7 +5,7 @@ import fs from "node:fs";
 export const AUTH_FILE = path.join(__dirname, "../.auth/user.json");
 
 export async function loginAsDemo(page: Page) {
-  await page.goto("/");
+  await page.goto("/login");
   await page.getByRole("button", { name: /already have an account/i }).click();
   await page.getByPlaceholder("Email").fill("maya@example.com");
   await page.getByPlaceholder("Password").fill("demo1234");

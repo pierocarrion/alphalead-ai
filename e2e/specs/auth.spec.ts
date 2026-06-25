@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Authentication", () => {
   test("demo user can log in", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
 
     // Default is signup mode; switch to login
     await page.getByRole("button", { name: /already have an account/i }).click();
@@ -15,20 +15,20 @@ test.describe("Authentication", () => {
   });
 
   test("invalid credentials show an error", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByRole("button", { name: /already have an account/i }).click();
 
     await page.getByPlaceholder("Email").fill("maya@example.com");
     await page.getByPlaceholder("Password").fill("wrong-password");
     await page.getByRole("button", { name: /^sign in$/i }).click();
 
-    await expect(page.getByText(/invalid|credentials|error/i)).toBeVisible();
+    await expect(page.getByText(/invalid|credentials|error|doesn't match/i)).toBeVisible();
   });
 
   test("new user can sign up", async ({ page }) => {
     const email = `e2e-${Date.now()}@example.com`;
 
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByPlaceholder("Your name").fill("E2E User");
     await page.getByPlaceholder("Email").fill(email);
     await page.getByPlaceholder("Password").fill("e2e-password-123");

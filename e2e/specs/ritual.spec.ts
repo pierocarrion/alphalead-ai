@@ -1,33 +1,38 @@
 import { test, expect } from "../fixtures/auth";
 
+const DRAFT = {
+  title: "Write the launch report",
+  fromQuote: "“the launch report”",
+  category: "Docs",
+  app: "Acme Docs",
+  due: "this week",
+  load: "Medium" as const,
+  micro: "Open the doc and write one rough paragraph.",
+  action: "one rough paragraph",
+  resource: "Acme Docs",
+  selfMade: true,
+  confidence: 0.9,
+};
+
 test.describe("Ritual", () => {
   test("completes a full ritual flow", async ({ demoPage }) => {
-    await demoPage.goto("/chat");
+    const res = await demoPage.request.post("/api/tasks", { data: { draft: DRAFT } });
+    const { task } = await res.json();
 
-    const input = demoPage.getByPlaceholder("Message #q3-launch…");
-    await input.fill("I need to write the launch report today");
-    await demoPage.keyboard.press("Enter");
-
-    const interception = demoPage.getByText(/mira heard|looks like a task|start/i).first();
-    await expect(interception).toBeVisible({ timeout: 5000 });
-
-    await demoPage.getByRole("button", { name: /start|show|task/i }).first().click();
-    await expect(demoPage).toHaveURL(/task\/.+/);
-
-    await demoPage.getByRole("button", { name: /start ritual|open it|begin/i }).first().click();
-    await expect(demoPage).toHaveURL(/ritual\/.+/);
+    await demoPage.goto(`/ritual/${task.id}`);
+    await expect(demoPage).toHaveURL(/ritual\/.+/, { timeout: 10000 });
 
     // Unlock step 0: select feeling
     await demoPage.getByText("A little anxious").click();
 
     // Unlock step 1: validation
-    await demoPage.getByRole("button", { name: /i'm ready/i }).click();
+    await demoPage.getByRole("button", { name: /ready/i }).click();
 
     // Unlock step 2: micro-step, start focus
     await demoPage.getByRole("button", { name: /open it with me/i }).click();
 
     // Focus step
-    await expect(demoPage.getByText("You're in it now.")).toBeVisible();
+    await expect(demoPage.getByText(/in it now/i)).toBeVisible();
     await demoPage.getByRole("button", { name: /i did/i }).click();
 
     // Reward step

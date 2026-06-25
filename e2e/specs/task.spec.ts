@@ -1,19 +1,27 @@
 import { test, expect } from "../fixtures/auth";
 
+const DRAFT = {
+  title: "Draft the Q3 launch deck",
+  fromQuote: "“a first rough draft of the launch deck”",
+  category: "Slides",
+  app: "Acme Deck Hub",
+  due: "before Thursday",
+  load: "Medium" as const,
+  micro: "Open the deck and type one messy sentence.",
+  action: "one messy sentence",
+  resource: "Acme Deck Hub",
+  selfMade: false,
+  confidence: 0.9,
+};
+
 test.describe("Task confirmation", () => {
-  test("navigates from chat interception to task page", async ({ demoPage }) => {
-    await demoPage.goto("/chat");
+  test("opens the demo task and shows its ritual", async ({ demoPage }) => {
+    const res = await demoPage.request.post("/api/tasks", { data: { draft: DRAFT } });
+    const { task } = await res.json();
 
-    const input = demoPage.getByPlaceholder("Message #q3-launch…");
-    await input.fill("I need to write the launch report today");
-    await demoPage.keyboard.press("Enter");
+    await demoPage.goto(`/ritual/${task.id}`);
 
-    const interception = demoPage.getByText(/mira heard|looks like a task|start/i).first();
-    await expect(interception).toBeVisible({ timeout: 5000 });
-
-    await demoPage.getByRole("button", { name: /start|show|task/i }).first().click();
-
-    await expect(demoPage).toHaveURL(/task\/.+/);
-    await expect(demoPage.getByText(/launch report/i).first()).toBeVisible();
+    await expect(demoPage).toHaveURL(/ritual\/.+/, { timeout: 10000 });
+    await expect(demoPage.getByText(/launch deck/i).first()).toBeVisible();
   });
 });

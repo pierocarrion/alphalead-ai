@@ -4,13 +4,32 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set");
-  }
+const E2E_DATABASE_URL =
+  process.env.E2E_DATABASE_URL ??
+  "postgresql://e2e:e2e@127.0.0.1:5432/e2e?schema=public";
 
-  const pool = new Pool({ connectionString: databaseUrl });
+async function waitForDb(url: string, timeoutMs = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const probe = new Pool({ connectionString: url, max: 1 });
+    try {
+      const client = await probe.connect();
+      client.release();
+      await probe.end();
+      return;
+    } catch {
+      await new Promise((r) => setTimeout(r, 250));
+    } finally {
+      await probe.end().catch(() => {});
+    }
+  }
+  throw new Error(`Timed out waiting for database at ${url}`);
+}
+
+async function main() {
+  await waitForDb(E2E_DATABASE_URL);
+
+  const pool = new Pool({ connectionString: E2E_DATABASE_URL });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
 

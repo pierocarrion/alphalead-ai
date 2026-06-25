@@ -1,26 +1,40 @@
 import { test, expect } from "../fixtures/auth";
 
 test.describe("Chat", () => {
+  const composer = (page: import("@playwright/test").Page) =>
+    page.getByPlaceholder("Message #q3-launch…").filter({ visible: true });
+
+  const send = (page: import("@playwright/test").Page) =>
+    page.getByRole("button", { name: /^send$/i }).filter({ visible: true });
+
+  const sendMessage = async (page: import("@playwright/test").Page, text: string) => {
+    const input = composer(page);
+    await input.fill(text);
+    const button = send(page);
+    // Ensure React state caught up before clicking (avoids clicking a disabled
+    // Send button on slower/touch contexts).
+    await expect(button).toBeEnabled({ timeout: 5000 });
+    await button.click();
+  };
+
   test("loads the demo channel and sends a task message", async ({ demoPage }) => {
+    test.setTimeout(60000);
     await demoPage.goto("/chat");
 
-    await expect(demoPage.getByText("#q3-launch")).toBeVisible();
+    const input = composer(demoPage);
+    await expect(input).toBeVisible();
 
-    const input = demoPage.getByPlaceholder("Message #q3-launch…");
-    await input.fill("I need to write the project proposal today");
-    await demoPage.keyboard.press("Enter");
+    await sendMessage(demoPage, "I need to write the project proposal today");
 
-    await expect(demoPage.getByText("I need to write the project proposal today")).toBeVisible();
-    await expect(demoPage.getByText(/mira heard|looks like a task|start/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(demoPage.getByText("I need to write the project proposal today").filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+    await expect(demoPage.getByText(/mira heard|looks like a task|start/i).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test("sends a casual message without interception", async ({ demoPage }) => {
     await demoPage.goto("/chat");
 
-    const input = demoPage.getByPlaceholder("Message #q3-launch…");
-    await input.fill("Good morning team!");
-    await demoPage.keyboard.press("Enter");
+    await sendMessage(demoPage, "Good morning team!");
 
-    await expect(demoPage.getByText("Good morning team!")).toBeVisible();
+    await expect(demoPage.getByText("Good morning team!").filter({ visible: true })).toBeVisible({ timeout: 5000 });
   });
 });

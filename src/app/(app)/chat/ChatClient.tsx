@@ -359,7 +359,7 @@ export function ChatClient({
               value={micActiveText}
               {...registerMention("desktop")}
               onKeyDown={handleInputKeyDown}
-              placeholder={`Message ${isDm ? titleName : `#${titleName}`}`}
+              placeholder={`Message ${isDm ? titleName : `#${titleName}`}…`}
               className="flex-1 bg-transparent py-2 text-[15px] text-ink outline-none placeholder:text-ink-3"
             />
             {micSupported && (

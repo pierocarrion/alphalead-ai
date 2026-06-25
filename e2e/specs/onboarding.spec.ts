@@ -4,8 +4,7 @@ test.describe("Onboarding", () => {
   test("new user completes onboarding", async ({ page }) => {
     const email = `onboarding-${Date.now()}@example.com`;
 
-    await page.goto("/");
-    await page.getByRole("button", { name: /need an account/i }).click();
+    await page.goto("/login");
     await page.getByPlaceholder("Your name").fill("Onboarding User");
     await page.getByPlaceholder("Email").fill(email);
     await page.getByPlaceholder("Password").fill("e2e-password-123");
@@ -32,6 +31,7 @@ test.describe("Onboarding", () => {
 
     await page.getByRole("button", { name: /take me in/i }).click();
 
-    await expect(page).toHaveURL("/home");
+    // "I build / make" is not a leader role, so onboarding routes to project join.
+    await expect(page).toHaveURL(/\/setup\/(join|project)/);
   });
 });

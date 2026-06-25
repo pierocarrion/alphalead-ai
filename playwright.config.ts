@@ -2,10 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e/specs",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: "html",
   globalSetup: "./e2e/setup.ts",
   use: {
@@ -17,9 +17,9 @@ export default defineConfig({
     { name: "Mobile Chrome", use: { ...devices["Pixel 5"] } },
   ],
   webServer: {
-    command: "npm run dev",
+    command: "node scripts/e2e-server.mjs",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000,
   },
 });
