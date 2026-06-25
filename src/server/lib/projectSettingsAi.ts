@@ -1,4 +1,5 @@
 import { generateJSON } from "./gemini";
+import { createLogger } from "@/shared/lib/logger";
 import type { SmartGoal } from "@/features/project-settings/domain/entities";
 import {
   KPI_CATALOG,
@@ -7,6 +8,8 @@ import {
   type KpiCatalogItem,
   type Severity,
 } from "@/features/project-settings/domain/catalog";
+
+const log = createLogger("ai");
 
 export interface SmartValidationResult {
   score: number;
@@ -61,7 +64,7 @@ Respond with JSON only:
     temperature: 0.3,
   });
   if (!result.ok || !result.data) {
-    console.error("[ai] analyzeSmartGoalWithAi failed", {
+    log.error("analyzeSmartGoalWithAi failed", {
       error: result.error,
       model: result.model,
     });
@@ -136,13 +139,81 @@ Respond with JSON only:
     temperature: 0.35,
   });
   if (!result.ok || !result.data) {
-    console.error("[ai] generateProjectInsights failed", {
+    log.error("generateProjectInsights failed", {
       error: result.error,
       model: result.model,
     });
     return { ok: false, error: FRIENDLY_AI_UNAVAILABLE };
   }
   return { ok: true, data: result.data };
+}
+
+export interface MethodologySuggestionInput {
+  description: string;
+  industry: string | null;
+  category: string | null;
+}
+
+export interface MethodologySuggestion {
+  key: "scrum" | "design_thinking";
+  rationale: string;
+  confidence: number;
+}
+
+/**
+ * Pide al LLM que recomiende entre Scrum y Design Thinking en base al
+ * objetivo, industria y categoría declarados en el wizard de proyecto.
+ * Sólo sugiere; la decisión final la toma el usuario en Configuración.
+ */
+export async function suggestMethodology(
+  input: MethodologySuggestionInput
+): Promise<{ ok: boolean; data?: MethodologySuggestion; error?: string }> {
+  const description = input.description.trim();
+  if (description.length < 8) {
+    return { ok: false, error: "Describe tu objetivo para poder sugerir." };
+  }
+
+  const prompt = `You are a senior project strategist. Recommend ONE methodology for a new project, choosing strictly between "scrum" and "design_thinking".
+
+Project description: ${description}
+Industry: ${input.industry ?? "(unspecified)"}
+Category: ${input.category ?? "(unspecified)"}
+
+Decision guide:
+- Prefer "scrum" when the goal is delivery-oriented, iterative, with a known product/team and time-boxed milestones (e.g. Lanzamiento, Producto, Operaciones, technology/marketing delivery).
+- Prefer "design_thinking" when the goal is discovery-oriented, exploratory, problem-framing or user research (e.g. Investigación, new product lines, undefined problems, design).
+
+Respond with JSON only:
+{
+  "key": "scrum" | "design_thinking",
+  "rationale": "one short sentence in Spanish explaining why it fits this project",
+  "confidence": 0-100
+}`;
+
+  const result = await generateJSON<MethodologySuggestion>(prompt, {
+    maxTokens: 200,
+    temperature: 0.25,
+  });
+  if (!result.ok || !result.data) {
+    log.error("suggestMethodology failed", {
+      error: result.error,
+      model: result.model,
+    });
+    return { ok: false, error: FRIENDLY_AI_UNAVAILABLE };
+  }
+
+  const data = result.data;
+  if (data.key !== "scrum" && data.key !== "design_thinking") {
+    return { ok: false, error: FRIENDLY_AI_UNAVAILABLE };
+  }
+  return {
+    ok: true,
+    data: {
+      key: data.key,
+      rationale: data.rationale?.trim() || "",
+      confidence: Math.max(0, Math.min(100, Number(data.confidence) || 0)),
+    },
+  };
 }
 
 export function kpiCatalogByKey(): Record<string, KpiCatalogItem> {

@@ -5,6 +5,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
 import { generateMiraResponse } from "@/server/lib/gemini";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("api:chat-mira");
 
 const requestSchema = z.object({
   message: z.string().min(1).max(2000),
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
     });
 
     if (!gemini.ok) {
-      console.error("[chat/mira] Gemini error:", gemini.error);
+      log.error("Gemini error", gemini.error);
       return NextResponse.json(
         {
           response:

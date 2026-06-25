@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { createLogger } from "@/shared/lib/logger";
 import {
   classifyMessage,
   detectImplicitLeaderMention,
@@ -10,6 +11,8 @@ import {
   shouldUseFallback,
 } from "./gemini";
 import { computeLoadBalance } from "./metrics";
+
+const log = createLogger("leaderBriefing");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -305,7 +308,7 @@ export async function buildLeaderBriefing(opts: {
         };
       }
     } catch (err) {
-      console.error("[leaderBriefing] AI failed, using heuristic:", err);
+      log.error("AI failed, using heuristic", err);
       if (!shouldUseFallback()) throw err;
     }
   } else {

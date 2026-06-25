@@ -1,11 +1,14 @@
 import { prisma } from "@/server/lib/prisma";
 import { container } from "@/server/lib/container";
+import { createLogger } from "@/shared/lib/logger";
 import {
   extractLeaderAnswerToKnowledge,
   generateMiraResponse,
   isGeminiEnabled,
 } from "@/server/lib/gemini";
 import type { KnowledgeBaseItem } from "@/features/projects/domain/repositories/IProjectRepository";
+
+const log = createLogger("chatKnowledge");
 
 /**
  * Matches "@mira", "mira," / "mira?" / "hey mira" at a word boundary.
@@ -34,7 +37,7 @@ export async function generateMiraChannelReply(args: {
     const items = await container.projectRepository.listKnowledge(args.workspaceId);
     knowledge = items.map((k) => ({ title: k.title, content: k.content }));
   } catch (err) {
-    console.error("[chatKnowledge] listKnowledge (reply) error:", err);
+    log.error("listKnowledge (reply) failed", err);
   }
 
   const result = await generateMiraResponse({
@@ -96,7 +99,7 @@ export async function maybeCaptureLeaderAnswer(args: {
       const items = await container.projectRepository.listKnowledge(args.workspaceId);
       existingTitles = items.map((k) => k.title);
     } catch (err) {
-      console.error("[chatKnowledge] listKnowledge (titles) error:", err);
+      log.error("listKnowledge (titles) failed", err);
     }
 
     const extraction = await extractLeaderAnswerToKnowledge({
@@ -114,7 +117,7 @@ export async function maybeCaptureLeaderAnswer(args: {
       content: e.content.trim(),
     });
   } catch (err) {
-    console.error("[chatKnowledge] maybeCaptureLeaderAnswer error:", err);
+    log.error("maybeCaptureLeaderAnswer failed", err);
     return null;
   }
 }

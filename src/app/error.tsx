@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("app-error");
 
 export default function Error({
   error,
@@ -10,7 +13,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[app-error]", error);
+    log.error("route error boundary", { name: error.name, message: error.message, digest: error.digest, stack: error.stack });
   }, [error]);
 
   return (

@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ApiError } from "@/shared/lib/api";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("query");
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -20,7 +23,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             },
           },
           mutations: {
-            onError: (error) => {
+            onError: (error: unknown) => {
+              log.error("mutation error", {
+                message: error instanceof Error ? error.message : String(error),
+              });
               const message =
                 error instanceof ApiError || error instanceof Error
                   ? error.message

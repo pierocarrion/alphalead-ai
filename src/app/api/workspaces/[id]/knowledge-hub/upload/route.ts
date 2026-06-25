@@ -9,7 +9,10 @@ import {
   getTextExtractor,
 } from "@/features/knowledge/infrastructure/extractors/textExtraction";
 import { getVectorStore } from "@/server/lib/ai/vectorStore";
+import { createLogger } from "@/shared/lib/logger";
 import { randomUUID } from "node:crypto";
+
+const log = createLogger("api:knowledge-hub-upload");
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
 
@@ -78,7 +81,7 @@ export async function POST(
       const ingest = knowledgeContainer.ingestDocument();
       await ingest
         .run({ resource, enrich: true })
-        .catch((err) => console.error("[knowledge-hub] upload ingest error:", err));
+        .catch((err) => log.error("upload ingest error", err));
       // Clean up any stale vectors on failure is handled by idempotent re-run.
       void getVectorStore;
     });

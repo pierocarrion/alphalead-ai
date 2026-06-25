@@ -1,5 +1,8 @@
 import { generateJSON } from "./gemini";
+import { createLogger } from "@/shared/lib/logger";
 import type { GoalProgressReport, Insight } from "@/features/projects/domain/entities/SmartGoal";
+
+const log = createLogger("goalInsight");
 
 export interface GoalInsightResult {
   insights: Insight[];
@@ -60,7 +63,7 @@ Respond with JSON only:
 
   if (!result.ok || !result.data?.insights?.length) {
     if (!result.ok && result.error) {
-      console.error("[goalInsight] Gemini error:", result.error);
+      log.error("Gemini error", result.error);
     }
     return { insights: heuristic, usedGemini: false };
   }

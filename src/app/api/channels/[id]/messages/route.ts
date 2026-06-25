@@ -8,12 +8,15 @@ import { deriveTaskEnhanced, looksLikeTask } from "@/features/tasks/lib/detect";
 import { coordinate } from "@/server/lib/aiCoordinator";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 import { ensureMiraBotUser } from "@/server/lib/miraBot";
+import { createLogger } from "@/shared/lib/logger";
 import {
   generateMiraChannelReply,
   isMentionedMira,
   maybeCaptureLeaderAnswer,
 } from "@/server/lib/chatKnowledge";
 import { publishRealtime } from "@/server/lib/realtime";
+
+const apiLog = createLogger("api:messages");
 
 const postSchema = z.object({
   text: z.string().min(1),
@@ -257,7 +260,7 @@ export async function POST(
           };
         }
       } catch (err) {
-        console.error("[channels/messages] mira reply error:", err);
+        apiLog.error("mira reply error", err);
       }
     }
 
@@ -273,7 +276,7 @@ export async function POST(
           leaderUserId: user.id,
           leaderMessageText: text,
         }).catch((err) =>
-          console.error("[channels/messages] leader capture error:", err)
+          apiLog.error("leader capture error", err)
         )
       );
     }

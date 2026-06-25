@@ -5,6 +5,9 @@ import { requireUser } from "@/server/lib/auth";
 import { container } from "@/server/lib/container";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 import { knowledgeContainer } from "@/features/knowledge/infrastructure/knowledgeContainer";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("api:knowledge-hub-resource");
 
 const patchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -88,7 +91,7 @@ export async function PATCH(
       const ingest = knowledgeContainer.ingestDocument();
       after(() =>
         ingest.run({ resource: updated, enrich: false }).catch((err) =>
-          console.error("[knowledge-hub] reingest error:", err)
+          log.error("reingest error", err)
         )
       );
     }

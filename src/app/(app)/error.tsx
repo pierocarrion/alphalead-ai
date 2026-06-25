@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("app-route-error");
 
 export default function AppError({
   error,
@@ -13,7 +16,7 @@ export default function AppError({
   const router = useRouter();
 
   useEffect(() => {
-    console.error("[app-route-error]", error);
+    log.error("app route error boundary", { name: error.name, message: error.message, digest: error.digest, stack: error.stack });
   }, [error]);
 
   return (

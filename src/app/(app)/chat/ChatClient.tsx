@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -20,9 +20,12 @@ import {
 } from "@/features/chat/presentation/components/MentionSuggestions";
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
 import { fetchJson } from "@/shared/lib/api";
+import { createLogger } from "@/shared/lib/logger";
 import { useLocale } from "@/i18n/useLocale";
 import { t } from "@/i18n/messages";
 import { DesktopRail } from "./DesktopRail";
+
+const log = createLogger("chat");
 
 interface ChatClientProps {
   channelId: string;
@@ -89,10 +92,46 @@ export function ChatClient({
 
   const warm = true;
 
+  const micLang = locale.startsWith("es") ? "es-ES" : "en-US";
+
+  const handleMicError = useCallback(
+    (code: string) => {
+      log.error("mic error", { code });
+      let key: string;
+      switch (code) {
+        case "not-allowed":
+        case "service-not-allowed":
+          key = "chat.micErrorPermission";
+          break;
+        case "no-speech":
+          key = "chat.micErrorNoSpeech";
+          break;
+        case "network":
+          key = "chat.micErrorNetwork";
+          break;
+        case "audio-capture":
+          key = "chat.micErrorNoMic";
+          break;
+        case "not-supported":
+        case "start-failed":
+          key = "chat.micErrorUnsupported";
+          break;
+        default:
+          key = "chat.micErrorUnknown";
+      }
+      toast.error(tr(key));
+    },
+    [tr]
+  );
+
   const { supported: micSupported, listening: micListening, interim: micInterim, start: micStart, stop: micStop } =
     useSpeechRecognition({
-      lang: "en-US",
-      onFinal: (t) => setDraft((prev) => (prev ? `${prev} ${t}` : t)),
+      lang: micLang,
+      onFinal: (finalText) => {
+        log.info("mic final transcript", { finalText });
+        setDraft((prev) => (prev ? `${prev} ${finalText}` : finalText));
+      },
+      onError: handleMicError,
     });
 
   const micActiveText = micListening && micInterim ? `${draft}${draft ? " " : ""}${micInterim}` : draft;
@@ -120,7 +159,10 @@ export function ChatClient({
 
   const handleSend = () => {
     if (!draft.trim()) return;
-    sendMessage.mutate(draft);
+    log.info("send", { length: draft.length, channelId });
+    sendMessage.mutate(draft, {
+      onError: (err) => log.error("send failed", err),
+    });
     setDraft("");
     setDismissed(false);
   };
@@ -311,7 +353,14 @@ export function ChatClient({
             />
             {micSupported && (
               <button
-                onClick={micListening ? micStop : micStart}
+                onClick={() => {
+                  if (micListening) {
+                    micStop();
+                  } else {
+                    log.info("mic start clicked", { lang: micLang });
+                    micStart();
+                  }
+                }}
                 aria-label={micListening ? "Stop voice transcription" : "Transcribe with voice"}
                 className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full transition-colors"
                 style={{
@@ -368,7 +417,14 @@ export function ChatClient({
             />
             {micSupported && (
               <button
-                onClick={micListening ? micStop : micStart}
+                onClick={() => {
+                  if (micListening) {
+                    micStop();
+                  } else {
+                    log.info("mic start clicked", { lang: micLang });
+                    micStart();
+                  }
+                }}
                 aria-label={micListening ? "Stop voice transcription" : "Transcribe with voice"}
                 className="flex h-9 w-9 flex-none items-center justify-center rounded-full transition-colors"
                 style={{

@@ -9,6 +9,10 @@
  * swap this implementation for a Redis Pub/Sub-backed broker behind the same
  * {@link IRealtimeBroker} interface — no caller changes required.
  */
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("realtime");
+
 export type RealtimeEventType =
   | "message_sent"
   | "mira_reply"
@@ -43,7 +47,7 @@ export class InProcessRealtimeBroker implements IRealtimeBroker {
       try {
         listener(event);
       } catch (err) {
-        console.error("[realtime] listener error:", err);
+        log.error("listener error", err);
       }
     }
   }

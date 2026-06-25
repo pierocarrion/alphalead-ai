@@ -7,6 +7,9 @@ import { SignUpUser, signUpUserSchema } from "@/features/auth/application/use-ca
 import { container } from "@/server/lib/container";
 import { isPrismaConnectionError } from "@/server/lib/auth";
 import { prisma } from "@/server/lib/prisma";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("auth");
 
 const signUpUser = new SignUpUser(container.userRepository);
 
@@ -76,10 +79,10 @@ const providers: NextAuthOptions["providers"] = [
         };
       } catch (error) {
         if (isPrismaConnectionError(error)) {
-          console.error("[auth] service unavailable:", error);
+          log.error("service unavailable", error);
           return null;
         }
-        console.error("[auth] authorize error:", error);
+        log.error("authorize error", error);
         return null;
       }
     },
@@ -154,13 +157,13 @@ async function persistGoogleAccount(
           data: { email },
         });
       } else {
-        console.warn(
-          "[auth] skipping email sync: google email belongs to another user",
-          { userId, email }
-        );
+        log.warn("skipping email sync: google email belongs to another user", {
+          userId,
+          email,
+        });
       }
     } catch (error) {
-      console.error("[auth] email sync failed (non-fatal):", error);
+      log.error("email sync failed (non-fatal)", error);
     }
   }
 }
@@ -208,9 +211,9 @@ export const authOptions: NextAuthOptions = {
           await persistGoogleAccount(targetUserId, account, email);
         } catch (error) {
           if (isPrismaConnectionError(error)) {
-            console.error("[auth] google link service unavailable:", error);
+            log.error("google link service unavailable", error);
           } else {
-            console.error("[auth] google link error:", error);
+            log.error("google link error", error);
           }
         }
 

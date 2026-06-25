@@ -5,6 +5,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/server/lib/prisma";
 import { analyzeCrewMood } from "@/server/lib/gemini";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("api:insights-mood");
 
 const requestSchema = z.object({
   workspaceId: z.string().min(1),
@@ -85,7 +88,7 @@ export async function POST(request: Request) {
     );
 
     if (!gemini.ok) {
-      console.error("[insights/mood] Gemini error:", gemini.error);
+      log.error("Gemini error", gemini.error);
       return NextResponse.json(
         {
           mood: { value: 50, label: "neutral" },

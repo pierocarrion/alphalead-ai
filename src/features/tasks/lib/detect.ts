@@ -4,6 +4,9 @@ import {
   isGeminiEnabled,
   shouldUseFallback,
 } from "@/server/lib/gemini";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("task:detect");
 
 export interface DetectedTaskDraft {
   title: string;
@@ -262,7 +265,7 @@ export async function deriveTaskEnhanced(
         : draft.resource,
     };
   } catch (err) {
-    console.error("[deriveTaskEnhanced] Gemini failed, using heuristic:", err);
+    log.error("deriveTaskEnhanced Gemini failed, using heuristic", err);
     if (shouldUseFallback()) return heuristic;
     throw err;
   }

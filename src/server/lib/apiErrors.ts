@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { createLogger } from "@/shared/lib/logger";
 import { UserFacingError } from "./errors";
+
+const log = createLogger("api");
 
 interface PrismaKnownError {
   code: string;
@@ -158,7 +161,7 @@ export function errorStatus(error: unknown): number {
 }
 
 export function jsonError(error: unknown, fallbackStatus?: number): NextResponse {
-  console.error("[api] error:", error);
+  log.error("handler error", { error, status: fallbackStatus ?? errorStatus(error) });
   const status = fallbackStatus ?? errorStatus(error);
   return NextResponse.json({ error: toFriendlyMessage(error) }, { status });
 }

@@ -5,6 +5,9 @@ import { getProjectSettingsDeps } from "@/features/project-settings/infrastructu
 import { SaveSmartGoal } from "@/features/project-settings/application/use-cases/SaveSmartGoal";
 import { smartGoalSchema } from "@/features/project-settings/application/schemas";
 import { container } from "@/server/lib/container";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("api:smart-goal");
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -54,7 +57,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         }
       );
     } catch (syncErr) {
-      console.error("[smart-goal] failed to sync into Goal/progress", syncErr);
+      log.error("failed to sync into Goal/progress", syncErr);
     }
 
     return NextResponse.json({ smartGoal });

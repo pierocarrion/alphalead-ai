@@ -1,5 +1,8 @@
 import { VertexAI } from "@google-cloud/vertexai";
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("gemini");
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID ?? "";
 const location = process.env.VERTEX_AI_LOCATION ?? "us-central1";
@@ -14,7 +17,7 @@ let generativeModel: ReturnType<VertexAI["preview"]["getGenerativeModel"]> | nul
 function getModel() {
   if (!GEMINI_ENABLED) return null;
   if (!projectId || !location) {
-    console.warn("[gemini] GOOGLE_CLOUD_PROJECT_ID or VERTEX_AI_LOCATION missing");
+    log.warn("GOOGLE_CLOUD_PROJECT_ID or VERTEX_AI_LOCATION missing");
     return null;
   }
   if (!generativeModel) {
@@ -111,14 +114,13 @@ export async function generateContent(
     try {
       const text = await callModel();
       if (!text) {
-        console.warn("[gemini] empty response from model", { model: modelName, attempt });
+        log.warn("empty response from model", { model: modelName, attempt });
         return { ok: false, error: "Empty response from Gemini", model: modelName };
       }
       return { ok: true, data: text, model: modelName };
     } catch (err) {
       const isTransient = isTransientError(err);
-      // Structured logging so it shows up usefully in Cloud Logging
-      console.error("[gemini] generateContent error", {
+      log.error("generateContent error", {
         attempt,
         transient: isTransient,
         model: modelName,
@@ -243,7 +245,8 @@ User: ${context.userName ?? "there"}
 Mood: ${context.mood ?? "unspecified"}
 Recent tasks: ${context.recentTasks?.join(", ") ?? "none"}
 
-Reply in English. Be friendly and concise (max 3 sentences). If the project knowledge base answers the question, base your answer on it. If it doesn't, answer briefly from general knowledge and note that it isn't captured in the project knowledge yet. When it fits, end with one small, kind next step.
+LANGUAGE RULE (highest priority): Detect the language of the user's message and ALWAYS reply in that exact same language. If the user writes in Spanish, reply in Spanish. If in English, reply in English. Match the user's language precisely — never default to English.
+Be friendly and concise (max 3 sentences). If the project knowledge base answers the question, base your answer on it. If it doesn't, answer briefly from general knowledge and note that it isn't captured in the project knowledge yet. When it fits, end with one small, kind next step.
 
 User message: """${context.message}"""`;
 

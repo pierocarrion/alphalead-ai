@@ -4,6 +4,9 @@ import { requireUser } from "@/server/lib/auth";
 import { container } from "@/server/lib/container";
 import { jsonError, parseRequestBody, toFriendlyMessage } from "@/server/lib/apiErrors";
 import { ensureDefaultCategories } from "@/features/knowledge/application/seedCategories";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("api:knowledge-hub");
 
 const createResourceSchema = z.object({
   title: z.string().min(1).max(200),
@@ -116,7 +119,7 @@ export async function POST(
     const ingest = knowledgeContainer.ingestDocument();
     const ingestPromise = ingest
       .run({ resource, enrich: data.enrich ?? false })
-      .catch((err) => console.error("[knowledge-hub] ingest error:", err));
+      .catch((err) => log.error("ingest error", err));
 
     if (data.ingest ?? true) {
       await ingestPromise;

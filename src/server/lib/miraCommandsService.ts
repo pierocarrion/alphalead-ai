@@ -1,6 +1,7 @@
 import { prisma } from "@/server/lib/prisma";
 import { getAiClient } from "@/server/lib/ai";
 import { container } from "@/server/lib/container";
+import { createLogger } from "@/shared/lib/logger";
 import { knowledgeContainer } from "@/features/knowledge/infrastructure/knowledgeContainer";
 import {
   MiraCommandRouter,
@@ -10,6 +11,8 @@ import {
   type MiraCommandResult,
 } from "@/features/chat/application/miraCommands";
 import { publishRealtime } from "@/server/lib/realtime";
+
+const log = createLogger("mira");
 
 export interface RunMiraOptions {
   channelId: string;
@@ -58,20 +61,21 @@ export async function runMiraInChannel(opts: RunMiraOptions): Promise<RunMiraOut
     conversation,
   };
 
-  // RAG retrieval for fetch commands (and light grounding for analytical ones).
-  if (parsed.command === "fetch" && parsed.argument && ctx.workspaceId) {
+  // RAG retrieval: always ground Mira on the project's Knowledge Hub so she can
+  // answer questions about any project data in any command, not just `fetch`.
+  if (ctx.workspaceId && parsed.argument) {
     try {
       const search = knowledgeContainer.searchKnowledge();
       const ranked = await search.hybrid({
         workspaceId: ctx.workspaceId,
         query: parsed.argument,
-        topK: 5,
+        topK: parsed.command === "fetch" ? 5 : 4,
       });
       ctx.knowledge = ranked
         .filter((r) => r.resource.title !== "(recurso no disponible)")
         .map((r) => ({ title: r.resource.title, snippet: r.snippet || r.resource.summary || "" }));
     } catch (err) {
-      console.error("[runMiraInChannel] fetch retrieval error:", err);
+      log.error("grounding retrieval error", err);
     }
   }
 
@@ -95,7 +99,7 @@ export async function runMiraInChannel(opts: RunMiraOptions): Promise<RunMiraOut
         },
       });
     } catch (err) {
-      console.error("[runMiraInChannel] persist insight error:", err);
+      log.error("persist insight error", err);
     }
     // Notify connected clients that a new Mira insight is available.
     publishRealtime("mira_insight", {
@@ -111,7 +115,7 @@ export async function runMiraInChannel(opts: RunMiraOptions): Promise<RunMiraOut
     try {
       await materializeTasksFromReply(opts.channelId, result.reply, ctx.workspaceId);
     } catch (err) {
-      console.error("[runMiraInChannel] materialize tasks error:", err);
+      log.error("materialize tasks error", err);
     }
   }
 
