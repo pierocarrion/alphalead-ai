@@ -38,10 +38,7 @@ function resolveLevel(): LogLevel {
 
 const MIN_LEVEL = LEVEL_WEIGHT[resolveLevel()];
 
-const isServer =
-  typeof window === "undefined" &&
-  typeof process !== "undefined" &&
-  !!process.versions?.node;
+const isServer = typeof window === "undefined";
 
 function safeSerialize(value: unknown): unknown {
   if (value instanceof Error) {
