@@ -44,6 +44,14 @@ export class PrismaGoalProgressRepository implements IGoalProgressRepository {
     });
     if (!goal) return null;
 
+    // ProjectTask (Kanban board) is the table where users actually mark tasks
+    // as done. It has no FK to Goal, so we pull it by workspace and merge it
+    // into the snapshot so the progress engine reflects real work.
+    const projectTasks = await prisma.projectTask.findMany({
+      where: { workspaceId: goal.workspaceId },
+      orderBy: { createdAt: "desc" },
+    });
+
     return {
       goal: {
         id: goal.id,
@@ -65,17 +73,30 @@ export class PrismaGoalProgressRepository implements IGoalProgressRepository {
         dueDate: m.dueDate,
         createdAt: m.createdAt,
       })),
-      tasks: goal.tasks.map((t) => ({
-        id: t.id,
-        title: t.title,
-        status: t.status === "done" ? "done" : "open",
-        userId: t.userId,
-        load: t.load,
-        estimatedMinutes: t.estimatedMinutes,
-        priority: t.priority,
-        createdAt: t.createdAt,
-        completedAt: t.completedAt,
-      })),
+      tasks: [
+        ...goal.tasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status === "done" ? "done" : "open",
+          userId: t.userId,
+          load: t.load,
+          estimatedMinutes: t.estimatedMinutes,
+          priority: t.priority,
+          createdAt: t.createdAt,
+          completedAt: t.completedAt,
+        })),
+        ...projectTasks.map((pt) => ({
+          id: `pt_${pt.id}`,
+          title: pt.title,
+          status: pt.status === "done" ? "done" : "open",
+          userId: pt.assigneeId ?? pt.createdById,
+          load: priorityToLoad(pt.priority),
+          estimatedMinutes: null,
+          priority: null,
+          createdAt: pt.createdAt,
+          completedAt: pt.completedAt,
+        })),
+      ],
       members: goal.workspace.memberships.map((m) => ({
         userId: m.userId,
         name: m.user.name ?? "Someone",
@@ -167,4 +188,17 @@ function toSummary(goal: PrismaGoalRow | PrismaGoalListRow): GoalSummary {
     deadline: goal.deadline,
     createdAt: goal.createdAt,
   };
+}
+
+/** Maps a ProjectTask priority (low|medium|high|urgent) to a SmartTask load. */
+function priorityToLoad(priority: string | null): string {
+  switch (priority) {
+    case "high":
+    case "urgent":
+      return "Heavy";
+    case "medium":
+      return "Medium";
+    default:
+      return "Light";
+  }
 }
