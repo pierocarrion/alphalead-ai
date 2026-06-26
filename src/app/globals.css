@@ -52,6 +52,25 @@
   box-sizing: border-box;
 }
 
+/* Manito en elementos clickeables */
+button,
+a,
+[role="button"],
+summary,
+label[for],
+select,
+option,
+[tabindex]:not([tabindex="-1"]),
+[onclick],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 html,
 body {
   height: 100%;
