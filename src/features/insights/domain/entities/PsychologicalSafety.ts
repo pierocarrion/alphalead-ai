@@ -8,6 +8,8 @@ export interface SafetyTrendPoint {
 export interface PsychologicalSafety {
   score: number;
   status: SafetyStatus;
+  /** False when there is no survey/feedback data to compute a real score. */
+  hasData: boolean;
   trend: SafetyTrendPoint[];
   breakdown: {
     survey: number;

@@ -99,7 +99,7 @@ export class PrismaTeamInsightsRepository implements ITeamInsightsRepository {
         memberFeedback.filter((f) => (f.score ?? 0) <= 2).length;
       const total = memberSurveys.length + memberFeedback.length;
       const sentimentScore =
-        total === 0 ? 60 : Math.round((50 + ((positive - risk) / total) * 50) * 10) / 10;
+        total === 0 ? 0 : Math.round((50 + ((positive - risk) / total) * 50) * 10) / 10;
       const sentiment = toSentiment(sentimentScore);
 
       const employee: EmployeeWithMetrics = {
@@ -120,6 +120,7 @@ export class PrismaTeamInsightsRepository implements ITeamInsightsRepository {
         learningProgress,
         sentimentScore,
         sentiment,
+        sentimentHasData: total > 0,
       };
       return employee;
     });

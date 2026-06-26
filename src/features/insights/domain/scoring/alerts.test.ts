@@ -25,12 +25,14 @@ function member(id: string, sentimentScore = 70): EmployeeWithMetrics {
     learningProgress: 0,
     sentimentScore,
     sentiment: sentimentScore >= 66 ? "positive" : sentimentScore >= 40 ? "neutral" : "risk",
+    sentimentHasData: true,
   };
 }
 
-const safety = (score: number): PsychologicalSafety => ({
+const safety = (score: number, hasData = true): PsychologicalSafety => ({
   score,
   status: score < 40 ? "critical" : score < 70 ? "moderate" : "healthy",
+  hasData,
   trend: [],
   breakdown: { survey: 0, feedback: 0, participation: 0, sentiment: 0 },
 });

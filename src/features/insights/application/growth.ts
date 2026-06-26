@@ -41,7 +41,7 @@ export async function computeGrowth(
     );
     const sustainableProductivity = clampPct(
       bucketTasks.length === 0
-        ? 50
+        ? 0
         : Math.min(100, (bucketTasks.filter((t) => t.completedAt).length / Math.max(1, bucketTasks.length)) * 100)
     );
 

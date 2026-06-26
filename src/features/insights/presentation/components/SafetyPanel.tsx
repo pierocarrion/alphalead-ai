@@ -21,6 +21,23 @@ const STATUS_HELPER_KEY: Record<string, string> = {
 export function SafetyPanel({ overview }: { overview: TeamOverview }) {
   const [locale] = useLocale();
   const s = overview.psychologicalSafety;
+
+  if (!s.hasData) {
+    return (
+      <Panel
+        kicker={t(locale, "insights.safety.kicker")}
+        title={t(locale, "insights.safety.title")}
+      >
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <span className="text-3xl">📋</span>
+          <p className="max-w-sm text-sm text-ink-2">
+            {t(locale, "insights.safety.noData")}
+          </p>
+        </div>
+      </Panel>
+    );
+  }
+
   const titleKey = STATUS_TITLE_KEY[s.status];
   const helperKey = STATUS_HELPER_KEY[s.status];
   return (

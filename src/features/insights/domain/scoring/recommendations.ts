@@ -10,6 +10,7 @@ export interface GenerateInsightsInput {
   skills: SkillCell[];
   skillGaps: SkillGap[];
   safetyScore: number;
+  safetyHasData: boolean;
   riskScore: number;
   sinceDays: number;
 }
@@ -77,7 +78,7 @@ export function generateInsights(input: GenerateInsightsInput): TeamInsight[] {
     }
   }
 
-  if (input.safetyScore < 50) {
+  if (input.safetyHasData && input.safetyScore < 50) {
     insights.push({
       id: "insight:safety",
       category: "wellbeing",

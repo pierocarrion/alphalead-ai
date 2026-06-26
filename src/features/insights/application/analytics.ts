@@ -114,13 +114,13 @@ export async function assembleCore(
       learningProgress: round1(employeeLearningProgress(memberLearning)),
       sentimentScore: round1(sentimentScore),
       sentiment: classifyEmployeeSentiment(sentimentScore),
+      sentimentHasData:
+        memberSurveys.length > 0 || memberFeedback.length > 0,
     } satisfies EmployeeWithMetrics;
   });
 
-  const surveyAvg =
-    surveys.length > 0
-      ? avg(surveys.map((s) => s.psychologicalSafety))
-      : 70;
+  const safetyHasData = surveys.length > 0 || feedback.length > 0;
+  const surveyAvg = surveys.length > 0 ? avg(surveys.map((s) => s.psychologicalSafety)) : 0;
   const feedbackAvg = feedbackAvgScore(feedback);
   const participationRate = participationPct(checkIns, members, since, until);
   const sentimentTeam = teamSentimentScore(surveys);
@@ -135,6 +135,7 @@ export async function assembleCore(
   });
   const safety: PsychologicalSafety = {
     ...safetyScored,
+    hasData: safetyHasData,
     trend,
   };
 
@@ -239,14 +240,14 @@ function employeeSentimentScore(
     ...feedback.filter((f) => (f.score ?? f.metricValue ?? 0) <= 2),
   ].length;
   const total = surveys.length + feedback.length;
-  if (total === 0) return 60;
+  if (total === 0) return 0;
   return sentimentScoreFromRates(positive / total, risk / total);
 }
 
 function teamSentimentScore(
   surveys: { sentiment: string }[]
 ): number {
-  if (surveys.length === 0) return 70;
+  if (surveys.length === 0) return 0;
   const positive = surveys.filter((s) => s.sentiment === "positive").length;
   const risk = surveys.filter((s) => s.sentiment === "risk").length;
   return sentimentScoreFromRates(positive / surveys.length, risk / surveys.length);
@@ -274,7 +275,7 @@ function feedbackAvgScore(
   const values = feedback
     .map((f) => f.score ?? f.metricValue)
     .filter((v): v is number => typeof v === "number");
-  if (values.length === 0) return 70;
+  if (values.length === 0) return 0;
   const normalized = avg(values.map((v) => (v <= 5 ? (v / 5) * 100 : v)));
   return normalized;
 }

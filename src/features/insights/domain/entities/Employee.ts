@@ -22,6 +22,8 @@ export interface EmployeeMetrics {
   learningProgress: number;
   sentimentScore: number;
   sentiment: EmotionalState;
+  /** False when sentiment was derived without any survey/feedback data. */
+  sentimentHasData: boolean;
 }
 
 export interface EmployeeWithMetrics extends Employee, EmployeeMetrics {}

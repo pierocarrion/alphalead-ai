@@ -67,6 +67,7 @@ export class GetTeamOverview {
       skills,
       skillGaps,
       safetyScore: core.safety.score,
+      safetyHasData: core.safety.hasData,
       riskScore: core.risk.score,
       sinceDays: input.days,
     });

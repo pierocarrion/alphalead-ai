@@ -46,7 +46,7 @@ export function detectAlerts(input: DetectAlertsInput): TeamAlert[] {
     }
   }
 
-  if (input.safety.score < t.safetyCritical) {
+  if (input.safety.hasData && input.safety.score < t.safetyCritical) {
     alerts.push({
       id: "safety:team",
       severity: "critical",
@@ -63,7 +63,7 @@ export function detectAlerts(input: DetectAlertsInput): TeamAlert[] {
   }
 
   for (const member of input.members) {
-    if (member.sentimentScore < t.safetyCritical) {
+    if (member.sentimentHasData && member.sentimentScore < t.safetyCritical) {
       alerts.push({
         id: `emotional:${member.employeeId}`,
         severity: "warning",

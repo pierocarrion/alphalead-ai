@@ -53,10 +53,14 @@ export function ColleagueCard({
           <span
             className="absolute -bottom-0.5 -right-0.5 text-sm"
             title={t(locale, "insights.card.sentimentTitle", {
-              label: t(locale, SENTIMENT_KEY[employee.sentiment]),
+              label: employee.sentimentHasData
+                ? t(locale, SENTIMENT_KEY[employee.sentiment])
+                : t(locale, "insights.card.sentiment.noData"),
             })}
           >
-            {SENTIMENT_EMOJI[employee.sentiment]}
+            {employee.sentimentHasData
+              ? SENTIMENT_EMOJI[employee.sentiment]
+              : "\u{1F610}"}
           </span>
         </div>
         <div className="min-w-0 flex-1">
