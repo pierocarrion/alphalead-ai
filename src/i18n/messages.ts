@@ -396,6 +396,7 @@ export const MESSAGES: Record<Locale, Record<string, string>> = {
     "wizard.method.confLow": "Coincidencia posible",
     "wizard.method.note": "Es solo una sugerencia basada en lo que escribiste.",
     "wizard.method.recommended": "RECOMENDADA",
+    "wizard.method.selected": "SELECCIONADA",
 
     "knowledge.kicker": "Coordinación",
     "knowledge.title": "Knowledge Hub",
@@ -1072,6 +1073,7 @@ export const MESSAGES: Record<Locale, Record<string, string>> = {
     "wizard.method.confLow": "Possible match",
     "wizard.method.note": "It's only a suggestion based on what you wrote.",
     "wizard.method.recommended": "RECOMMENDED",
+    "wizard.method.selected": "SELECTED",
 
     "knowledge.kicker": "Coordination",
     "knowledge.title": "Knowledge Hub",

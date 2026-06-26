@@ -89,6 +89,8 @@ export function ProjectWizard({ onAfterCreate }: ProjectWizardProps = {}) {
     error: string | null;
   }>({ loading: false, data: null, error: null });
   const methodologyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedMethodology, setSelectedMethodology] = useState<string | null>(null);
+  const userPickedMethodology = useRef(false);
 
   const [docs, setDocs] = useState<KnowledgeDoc[]>([
     { title: "", sourceUrl: "" },
@@ -156,6 +158,9 @@ export function ProjectWizard({ onAfterCreate }: ProjectWizardProps = {}) {
           }
         );
         setMethodologyHint({ loading: false, data: res.suggestion, error: null });
+        if (!userPickedMethodology.current) {
+          setSelectedMethodology(res.suggestion.key);
+        }
       } catch (err) {
         const message =
           err instanceof ApiError || err instanceof Error ? err.message : null;
@@ -490,7 +495,15 @@ export function ProjectWizard({ onAfterCreate }: ProjectWizardProps = {}) {
             )}
 
             {step === 1 && (
-              <MethodologySuggestionCard hint={methodologyHint} locale={locale} />
+              <MethodologySuggestionCard
+                hint={methodologyHint}
+                locale={locale}
+                selectedKey={selectedMethodology}
+                onSelect={(key) => {
+                  userPickedMethodology.current = true;
+                  setSelectedMethodology(key);
+                }}
+              />
             )}
 
             {step === 2 && (
@@ -723,9 +736,13 @@ interface MethodologyHintState {
 function MethodologySuggestionCard({
   hint,
   locale,
+  selectedKey,
+  onSelect,
 }: {
   hint: MethodologyHintState;
   locale: import("@/i18n/messages").Locale;
+  selectedKey: string | null;
+  onSelect: (key: string) => void;
 }) {
   const OPTIONS = METHODOLOGIES.filter(
     (m) => m.key === "scrum" || m.key === "design_thinking"
@@ -777,20 +794,29 @@ function MethodologySuggestionCard({
 
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {OPTIONS.map((m) => {
-          const isPrimary = m.key === suggestedKey;
+          const isSelected = m.key === selectedKey;
+          const isSuggested = m.key === suggestedKey;
           return (
-            <div
+            <button
               key={m.key}
-              className={`flex flex-col gap-2 rounded-2xl border p-4 transition-all ${
-                isPrimary
+              type="button"
+              onClick={() => onSelect(m.key)}
+              className={`flex flex-col gap-2 rounded-2xl border p-4 text-left transition-all active:scale-[0.98] ${
+                isSelected
                   ? "border-accent bg-accent-soft"
-                  : "border-line bg-surface-2"
+                  : "border-line bg-surface-2 hover:bg-surface-3"
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xl">{m.emoji}</span>
-                {isPrimary ? (
+                {isSelected ? (
                   <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-ink">
+                    {isSuggested
+                      ? t(locale, "wizard.method.recommended")
+                      : t(locale, "wizard.method.selected")}
+                  </span>
+                ) : isSuggested ? (
+                  <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[10px] font-bold text-accent">
                     {t(locale, "wizard.method.recommended")}
                   </span>
                 ) : null}
@@ -808,7 +834,7 @@ function MethodologySuggestionCard({
                 ))}
               </div>
               <p className="pt-1 text-[11.5px] text-glow">✨ {m.aiHint}</p>
-            </div>
+            </button>
           );
         })}
       </div>

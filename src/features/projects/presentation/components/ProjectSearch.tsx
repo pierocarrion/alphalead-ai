@@ -278,6 +278,25 @@ export function ProjectSearch({ initialHasProjects = false }: { initialHasProjec
                     o volver más tarde con el hashtag que te dé un líder.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => router.push("/setup/project")}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-accent bg-accent-soft p-4 text-left transition-all active:scale-[0.99]"
+                >
+                  <div className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-accent text-xl text-accent-ink">
+                    ＋
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display text-[17px] text-ink">
+                      Crear un proyecto
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink-2">
+                      Sé el líder de tu propio proyecto. Mira te sugerirá una
+                      metodología (Scrum o Design Thinking).
+                    </p>
+                  </div>
+                  <span className="text-ink-3">→</span>
+                </button>
                 <CommunityCard
                   joining={joiningCommunity}
                   onJoin={joinCommunity}
