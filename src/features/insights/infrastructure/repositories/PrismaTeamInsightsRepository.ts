@@ -142,9 +142,10 @@ export class PrismaTeamInsightsRepository implements ITeamInsightsRepository {
   async listTasks(workspaceId: string, since?: Date): Promise<RawTaskRow[]> {
     const rows = await prisma.task.findMany({
       where: {
-        user: {
-          memberships: { some: { workspaceId } },
-        },
+        OR: [
+          { message: { channel: { workspaceId } } },
+          { goal: { workspaceId } },
+        ],
         ...(since ? { createdAt: { gte: since } } : {}),
       },
       select: {
@@ -283,7 +284,14 @@ export class PrismaTeamInsightsRepository implements ITeamInsightsRepository {
         take: limit,
       }),
       prisma.task.findMany({
-        where: { userId: employeeId, status: { in: ["done", "completed"] } },
+        where: {
+          userId: employeeId,
+          status: { in: ["done", "completed"] },
+          OR: [
+            { message: { channel: { workspaceId } } },
+            { goal: { workspaceId } },
+          ],
+        },
         orderBy: { completedAt: "desc" },
         take: limit,
       }),
