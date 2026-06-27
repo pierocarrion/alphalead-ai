@@ -25,19 +25,25 @@ export const siteUrl = resolveSiteUrl();
 export const siteName = "AlphaLead AI";
 
 export const siteDescription =
-  "A gentle, anti-guilt productivity companion for teams. Alpha detects procrastination in team chat, shrinks tasks into 2-minute starts, and gives leaders private insights — without shame.";
+  "AlphaLead AI is a team management software that gives every team member a clear first step, surfaces anonymous blockers, and eliminates standups — without surveillance. The only team management app built async from day one to eliminate choice paralysis.";
 
 export const siteKeywords = [
-  "productivity",
-  "team productivity",
-  "anti-procrastination",
-  "AI teammate",
-  "team chat AI",
-  "task detection",
-  "focus app",
-  "burnout prevention",
-  "crew management",
-  "AlphaLead AI",
+ "team management tools",
+    "team management software",
+    "ai task prioritization",
+    "workplace management solutions",
+    "project management tools for remote teams",
+    "automated task manager",
+    "remote team management tools",
+    "virtual team management tools",
+    "team productivity tools",
+    "support software for product teams",
+    "team management app",
+    "sprint planning",
+    "choice paralysis",
+    "task prioritization",
+    "stop team procrastination",
+    "assignment tracker",
 ];
 
 export const siteLocale = "en_US";
