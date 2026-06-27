@@ -53,6 +53,9 @@ export default function LandingPage() {
           <Link href="#pricing" className="hidden text-sm font-semibold text-ink-2 hover:text-ink sm:block">
             Pricing
           </Link>
+          <Link href="/blogs" className="hidden text-sm font-semibold text-ink-2 hover:text-ink sm:block">
+            Blogs
+          </Link>
           <Link
             href="/login"
             className="rounded-full bg-surface px-5 py-2.5 text-sm font-semibold text-ink shadow-[inset_0_0_0_1px_var(--color-line-2)] transition hover:bg-surface-2"
