@@ -3,6 +3,9 @@ import type { KnowledgeResource } from "../../domain/entities/KnowledgeResource"
 import { chunkText } from "../lib/chunking";
 import { getVectorStore } from "@/server/lib/ai/vectorStore";
 import type { AiClient } from "@/server/lib/ai/client";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("ingest");
 
 export interface IngestDocumentInput {
   resource: KnowledgeResource;
@@ -66,7 +69,14 @@ export class IngestDocument {
     for (let i = 0; i < persistedChunks.length; i += batchSize) {
       const batch = persistedChunks.slice(i, i + batchSize);
       const embedResult = await this.ai.embedder.embed(batch.map((c) => c.text));
-      if (!embedResult.ok || !embedResult.data) break;
+      if (!embedResult.ok || !embedResult.data) {
+        log.warn("embedder returned no vectors for resource", {
+          resourceId: resource.id,
+          ok: embedResult.ok,
+          error: embedResult.error,
+        });
+        break;
+      }
       const records = batch.map((chunk, idx) => ({
         id: chunk.id,
         vector: embedResult.data![idx],

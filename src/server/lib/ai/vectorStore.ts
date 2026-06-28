@@ -121,10 +121,15 @@ let defaultStore: IVectorStore | null = null;
  */
 export function getVectorStore(): IVectorStore {
   if (defaultStore) return defaultStore;
+  // Use PgVectorStore whenever DATABASE_URL is configured (i.e. production
+  // Cloud Run or Cloud Build jobs/reindex scripts run against Cloud SQL)
+  // AND pgvector hasn't been explicitly disabled. Tests always set their own
+  // store via `setVectorStore`, so they bypass this factory entirely — and
+  // PGlite (their backend) supports vector(768) via the loaded extension.
   const usePg =
-    process.env.NODE_ENV === "production" &&
+    Boolean(process.env.DATABASE_URL) &&
     process.env.PGVECTOR_ENABLED !== "false" &&
-    Boolean(process.env.DATABASE_URL);
+    process.env.NODE_ENV !== "test";
   defaultStore = usePg ? new PgVectorStore() : new InMemoryVectorStore();
   return defaultStore;
 }
