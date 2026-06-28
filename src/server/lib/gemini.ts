@@ -237,9 +237,10 @@ export interface AlphaChatContext {
 }
 
 export async function generateAlphaResponse(context: AlphaChatContext): Promise<GeminiResponse<string>> {
-  const hasKnowledge = context.knowledge && context.knowledge.length > 0;
-  const knowledgeBlock = hasKnowledge
-    ? `\n\nProject knowledge base — this is everything you actually know about this project. Ground your answer ONLY on it when the question is about the project:\n${context.knowledge
+  const knowledge = context.knowledge;
+  const hasKnowledge = !!knowledge && knowledge.length > 0;
+  const knowledgeBlock = hasKnowledge && knowledge
+    ? `\n\nProject knowledge base — this is everything you actually know about this project. Ground your answer ONLY on it when the question is about the project:\n${knowledge
         .map((k) => `### ${k.title}\n${k.content}`)
         .join("\n\n")}\n`
     : "\n\nProject knowledge base: (empty — nothing documented yet)\n";
