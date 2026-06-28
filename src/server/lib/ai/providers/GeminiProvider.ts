@@ -2,6 +2,7 @@ import { VertexAI } from "@google-cloud/vertexai";
 import type { AiMessage, AiResult } from "../types";
 import { BaseAiProvider } from "../baseProvider";
 import { extractCandidateText } from "@/server/lib/ai/geminiParts";
+import { getGcpAccessToken } from "../gcpAuth";
 
 interface GeminiConfig {
   projectId: string;
@@ -96,27 +97,47 @@ export class GeminiProvider extends BaseAiProvider {
     if (!this.isEnabled() || texts.length === 0) {
       return { ok: false, error: "Gemini embeddings not enabled", model: this.config.embeddingModel, provider: this.name };
     }
-    const client = this.getClient();
-    if (!client) return { ok: false, error: "Gemini not enabled", model: this.config.embeddingModel, provider: this.name };
+    if (!this.config.projectId || !this.config.location) {
+      return { ok: false, error: "Gemini embeddings require GOOGLE_CLOUD_PROJECT_ID and VERTEX_AI_LOCATION", model: this.config.embeddingModel, provider: this.name };
+    }
     try {
-      // The installed SDK version doesn't expose getEmbeddingModel in its
-      // types; access the preview surface loosely and validate the result.
-      const preview = client.preview as unknown as {
-        getEmbeddingModel?(args: { model: string }): {
-          embed(args: { content: { parts: { text: string }[] } }): Promise<{
-            embeddings?: Array<{ values?: number[] }>;
-          }>;
-        };
-      };
-      const embeddingModel = preview.getEmbeddingModel?.({ model: this.config.embeddingModel });
-      if (!embeddingModel) {
-        return { ok: false, error: "Gemini embeddings unavailable in this SDK version", model: this.config.embeddingModel, provider: this.name };
-      }
-      const result = await embeddingModel.embed({
-        content: { parts: texts.map((t) => ({ text: t })) },
+      // The bundled @google-cloud/vertexai SDK (1.12) doesn't expose
+      // embedding models on its `preview` surface anymore — calling
+      // `preview.getEmbeddingModel` returned undefined and silently broke RAG
+      // grounding for every @Alpha reply. Hit the REST :predict endpoint
+      // directly with GCP Application Default Credentials instead, which is
+      // stable and version-independent.
+      const token = await getGcpAccessToken();
+      const url =
+        `https://${this.config.location}-aiplatform.googleapis.com/v1` +
+        `/projects/${this.config.projectId}` +
+        `/locations/${this.config.location}` +
+        `/publishers/google/models/${this.config.embeddingModel}:predict`;
+      // Batch all texts as instances; text-embedding-004 supports multiple
+      // instances per request (250 max). We don't chunk here — batching is the
+      // caller's responsibility.
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          instances: texts.map((t) => ({ content: t })),
+          parameters: { outputDimensionality: 768 },
+        }),
       });
-      const vectors = (result.embeddings ?? []).map((e) => e.values ?? []);
-      if (vectors.length === 0) return { ok: false, error: "Empty response from Gemini", model: this.config.embeddingModel, provider: this.name };
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        return { ok: false, error: `${res.status} ${res.statusText} ${body.slice(0, 200)}`, model: this.config.embeddingModel, provider: this.name };
+      }
+      const data = (await res.json()) as {
+        predictions?: Array<{ embeddings?: { values?: number[] } }>;
+      };
+      const vectors = (data.predictions ?? []).map((p) => p.embeddings?.values ?? []);
+      if (vectors.length === 0 || vectors.some((v) => v.length === 0)) {
+        return { ok: false, error: "Empty response from Gemini embeddings", model: this.config.embeddingModel, provider: this.name };
+      }
       return { ok: true, data: vectors, model: this.config.embeddingModel, provider: this.name };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
