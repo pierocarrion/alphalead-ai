@@ -110,9 +110,11 @@ describe("generateAlphaChannelReply", () => {
     });
 
     expect(reply).toBe("Se usará .NET y Flutter como frameworks.");
+    // The "@alpha" mention must be stripped from the RAG query so it doesn't
+    // pollute the keyword/FTS search with "alpha" as a required term.
     expect(mocks.hybrid).toHaveBeenCalledWith({
       workspaceId: workspace.id,
-      query: "@alpha qué tecnología se usará?",
+      query: "qué tecnología se usará?",
       topK: 5,
     });
     const arg = mocks.generateAlphaResponse.mock.calls[0][0];

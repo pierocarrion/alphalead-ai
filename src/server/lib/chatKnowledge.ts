@@ -11,6 +11,7 @@ import {
   toFriendlyGeminiError,
 } from "@/server/lib/gemini";
 import { knowledgeContainer } from "@/features/knowledge/infrastructure/knowledgeContainer";
+import { stripAlphaMention } from "@/features/chat/application/alphaCommands";
 import type { KnowledgeBaseItem } from "@/features/projects/domain/repositories/IProjectRepository";
 
 const log = createLogger("chatKnowledge");
@@ -40,15 +41,17 @@ export async function generateAlphaChannelReply(args: {
   // Ground Alpha on the project's Knowledge Hub using the same hybrid RAG
   // pipeline (semantic + keyword) the explicit @alpha commands use, so the
   // "general" path no longer reads a separate legacy table that drifted out
-  // of sync. The user's own message is the query — natural-language questions
-  // like "what technology will we use?" map to the relevant resource via the
-  // embedder + FTS fusion in SearchKnowledge.hybrid.
+  // of sync. Strip the "@alpha" mention from the query first — the full
+  // message text (e.g. "@alpha qué tecnología se usará?") would pollute the
+  // keyword/FTS search with "alpha" as a required term and miss resources
+  // whose title/content don't contain that word.
+  const ragQuery = stripAlphaMention(args.messageText) || args.messageText;
   let knowledge: Array<{ title: string; content: string }> = [];
   try {
     const search = knowledgeContainer.searchKnowledge();
     const ranked = await search.hybrid({
       workspaceId: args.workspaceId,
-      query: args.messageText,
+      query: ragQuery,
       topK: 5,
     });
     knowledge = ranked

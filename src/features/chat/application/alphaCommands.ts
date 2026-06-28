@@ -45,12 +45,23 @@ const COMMANDS: CommandDef[] = [
 
 const FETCH_PATTERN = /fetch\s*:\s*(.+)|fetch\s+(.+)/i;
 
+/**
+ * Removes a leading "@alpha" / "alpha," / "hey alpha" token from a chat message
+ * so the remaining text can be used as a clean search query for RAG retrieval.
+ * Kept here (next to {@link parseAlphaCommand}) so the stripping regex stays
+ * in one place and both callers stay in sync.
+ */
+export function stripAlphaMention(rawText: string): string {
+  return rawText
+    .trim()
+    .replace(/(?:^|\s)@?\s*alpha\b[,:]?\s*/i, "")
+    .trim();
+}
+
 export function parseAlphaCommand(rawText: string): ParsedCommand {
   const text = rawText.trim();
   // Remove leading "@alpha" / "alpha," token so keyword matching is stable.
-  const stripped = text
-    .replace(/(?:^|\s)@?\s*alpha\b[,:]?\s*/i, "")
-    .trim();
+  const stripped = stripAlphaMention(text);
 
   const fetchMatch = stripped.match(FETCH_PATTERN);
   if (fetchMatch) {

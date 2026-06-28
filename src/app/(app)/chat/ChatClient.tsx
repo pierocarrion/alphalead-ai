@@ -18,6 +18,7 @@ import {
   MentionSuggestions,
   type MentionCandidate,
 } from "@/features/chat/presentation/components/MentionSuggestions";
+import { AlphaCommandHints } from "@/features/chat/presentation/components/AlphaCommandHints";
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
 import { fetchJson } from "@/shared/lib/api";
 import { createLogger } from "@/shared/lib/logger";
@@ -48,13 +49,19 @@ export function ChatClient({
   const { data: session } = useSession();
   const [locale] = useLocale();
   const tr = (k: string, v?: Record<string, string | number>) => t(locale, k, v);
-  const { messages, members, isLoading, sendMessage, detected: detectedFromSend, isSending, queryError } =
+  const { messages, members, isLoading, sendMessage, detected: detectedFromSend, isSending, queryError, alphaPending } =
     useChannel(channelId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState("");
   const [dismissed, setDismissed] = useState(false);
+  const [alphaHintsDismissed, setAlphaHintsDismissed] = useState(false);
   const [detectedFromApi, setDetectedFromApi] = useState<DetectedTaskDraft | null>(null);
   const detected = detectedFromSend ?? detectedFromApi;
+
+  // Show command hints when the draft mentions @alpha (and the user hasn't
+  // dismissed them). Helps discoverability of Alpha's capabilities.
+  const alphaMentionedInDraft = /(?:^|\s)@?\s*alpha\b/i.test(draft);
+  const showAlphaHints = alphaMentionedInDraft && !alphaHintsDismissed;
 
   const { mention, register: registerMention, applyMention, close: closeMention } = useMention(draft, setDraft);
   const [highlightIndex, setHighlightIndex] = useState(0);
@@ -86,6 +93,12 @@ export function ChatClient({
   if (mention.query !== lastQuery) {
     setLastQuery(mention.query);
     setHighlightIndex(0);
+  }
+
+  // Re-enable Alpha command hints the next time the user types @alpha fresh
+  // (after the draft no longer mentions alpha, clear the dismissed flag).
+  if (alphaHintsDismissed && !alphaMentionedInDraft) {
+    setAlphaHintsDismissed(false);
   }
 
   const mentionOpen = mention.active && filteredCandidates.length > 0;
@@ -149,7 +162,7 @@ export function ChatClient({
         behavior: "smooth",
       });
     }
-  }, [messages.length, isSending, detected]);
+  }, [messages.length, isSending, detected, alphaPending]);
 
   useEffect(() => {
     fetchJson<{ detected: DetectedTaskDraft | null }>(`/api/channels/${channelId}/messages`)
@@ -169,6 +182,11 @@ export function ChatClient({
 
   const handleSelectMention = (c: MentionCandidate) => {
     applyMention(c.name);
+  };
+
+  const handlePickAlphaCommand = (text: string) => {
+    setDraft(text);
+    setAlphaHintsDismissed(true);
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -328,6 +346,7 @@ export function ChatClient({
                 </div>
               ))}
               {isSending && <TypingRow who={currentUserId ?? "you"} />}
+              {alphaPending && <TypingRow who="alpha" />}
             </>
           )}
           <div className="h-1.5" />
@@ -335,6 +354,14 @@ export function ChatClient({
 
         {/* Mobile composer */}
         <div className="flex-none bg-gradient-to-t from-bg to-transparent px-3.5 pb-3 pt-2 lg:hidden">
+          {showAlphaHints && (
+            <div className="mb-2">
+              <AlphaCommandHints
+                onPick={handlePickAlphaCommand}
+                onDismiss={() => setAlphaHintsDismissed(true)}
+              />
+            </div>
+          )}
           <div className="relative flex items-center gap-2 rounded-full border border-line bg-surface p-1 pl-4">
             {mentionOpen && (
               <MentionSuggestions
@@ -399,6 +426,14 @@ export function ChatClient({
 
         {/* Desktop composer */}
         <div className="hidden flex-none bg-[radial-gradient(120%_60%_at_50%_-10%,#221c2c,var(--color-bg)_60%)] px-6 pb-5 pt-2 lg:block">
+          {showAlphaHints && (
+            <div className="mb-2">
+              <AlphaCommandHints
+                onPick={handlePickAlphaCommand}
+                onDismiss={() => setAlphaHintsDismissed(true)}
+              />
+            </div>
+          )}
           <div className="relative flex items-center gap-2.5 rounded-2xl border border-line-2 bg-surface p-2 pl-4">
             {mentionOpen && (
               <MentionSuggestions

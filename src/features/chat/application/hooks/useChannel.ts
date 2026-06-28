@@ -5,6 +5,17 @@ import { ChatMessageData } from "@/features/chat/presentation/components/ChatMes
 import { DetectedTaskDraft } from "@/features/tasks/lib/detect";
 import { fetchJson, ApiError } from "@/shared/lib/api";
 
+/**
+ * Lightweight client-side check for an @Alpha mention. Mirrors the server-side
+ * `isMentionedAlpha` regex so the typing indicator shows only when Alpha will
+ * actually reply. Kept inline (not imported from server code) because this
+ * runs in the browser bundle.
+ */
+const ALPHA_MENTION_RE = /(?:^|\s)@?\s*alpha\b/i;
+export function isAlphaMentionClient(text: string): boolean {
+  return ALPHA_MENTION_RE.test(text);
+}
+
 export interface ChannelMember {
   id: string;
   name: string;
@@ -55,6 +66,13 @@ export function useChannel(channelId: string) {
 
   const queryError = error instanceof ApiError ? error : null;
 
+  // True when the in-flight message mentions @Alpha — the UI uses this to
+  // show an "Alpha is typing…" indicator before the reply lands.
+  const alphaPending =
+    sendMessage.isPending &&
+    Boolean(sendMessage.variables) &&
+    isAlphaMentionClient(sendMessage.variables as string);
+
   return {
     channel: data?.channel,
     messages: data?.messages ?? [],
@@ -64,5 +82,6 @@ export function useChannel(channelId: string) {
     sendMessage,
     detected: sendMessage.data?.detected ?? null,
     isSending: sendMessage.isPending,
+    alphaPending,
   };
 }

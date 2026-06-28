@@ -237,12 +237,12 @@ export interface AlphaChatContext {
 }
 
 export async function generateAlphaResponse(context: AlphaChatContext): Promise<GeminiResponse<string>> {
-  const knowledgeBlock =
-    context.knowledge && context.knowledge.length > 0
-      ? `\n\nProject knowledge base — this is everything you actually know about this project. Ground your answer ONLY on it when the question is about the project:\n${context.knowledge
-          .map((k) => `### ${k.title}\n${k.content}`)
-          .join("\n\n")}\n`
-      : "\n\nProject knowledge base: (empty — nothing documented yet)\n";
+  const hasKnowledge = context.knowledge && context.knowledge.length > 0;
+  const knowledgeBlock = hasKnowledge
+    ? `\n\nProject knowledge base — this is everything you actually know about this project. Ground your answer ONLY on it when the question is about the project:\n${context.knowledge
+        .map((k) => `### ${k.title}\n${k.content}`)
+        .join("\n\n")}\n`
+    : "\n\nProject knowledge base: (empty — nothing documented yet)\n";
 
   const projectBlock = context.projectContext
     ? `\nProject context:\n- Name: ${context.projectContext.name ?? "(unknown)"}\n- Description: ${context.projectContext.description ?? "(none)"}\n- Industry: ${context.projectContext.industry ?? "(unspecified)"}\n- Category: ${context.projectContext.category ?? "(unspecified)"}\n`
@@ -261,6 +261,12 @@ RULES (follow in order):
 4. Use the knowledge base as the source of truth when it covers the topic; otherwise rely on general knowledge ONLY for generic/non-project questions.
 5. SUMMARIZE. Compress everything you'd normally say into the tightest possible form. Lead with the direct answer in ONE short sentence (the TL;DR), then add at most 1–2 supporting sentences if they truly add value. No intros, no padding, no repetition. Prefer a 1-line answer whenever possible.
 6. Be friendly but brief. When it fits, end with one small, kind next step — not a long explanation.
+7. WHEN THE KNOWLEDGE BASE IS EMPTY OR DOESN'T COVER THE TOPIC, always offer a concrete next step in the SAME language as the user. Pick the most relevant of these suggestions and adapt to the context:
+   - "Puedes añadirlo al Knowledge Hub (Knowledge → Nueva entrada) y lo indexaré para futuras preguntas." / "Add it to the Knowledge Hub and I'll index it for future questions."
+   - "Usa @alpha fetch: [tema] para buscar en la base de conocimiento." / "Use @alpha fetch: [topic] to search the knowledge base."
+   - "Pregúntale al líder del proyecto para documentarlo." / "Ask the project leader to document it."
+   - "Prueba a reformular la pregunta con palabras clave del proyecto." / "Try rephrasing with project-specific keywords."
+   Never leave the user without a suggestion when you can't answer.
 
 User message: """${context.message}"""`;
 

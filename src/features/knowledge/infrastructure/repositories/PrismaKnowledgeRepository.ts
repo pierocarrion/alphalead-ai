@@ -33,6 +33,42 @@ import type {
   KnowledgeSuggestion,
 } from "../../domain/entities/KnowledgeResource";
 
+/**
+ * Common Spanish + English stopwords excluded from search tokenization so
+ * they don't dilute the FTS/ILIKE query. Words shorter than 3 chars are also
+ * dropped. This is intentionally lightweight (no external dependency) — the
+ * 'simple' Postgres dictionary used by the searchVector column doesn't ship
+ * with a stopword list.
+ */
+const SEARCH_STOPWORDS = new Set([
+  // Spanish
+  "que", "se", "de", "del", "el", "la", "los", "las", "un", "una", "unos",
+  "unas", "y", "o", "u", "a", "en", "es", "por", "con", "para", "su", "al",
+  "lo", "le", "les", "mi", "tu", "sus", "este", "esta", "esto", "estos",
+  "estas", "ese", "esa", "eso", "como", "mas", "más", "muy", "ya", "si",
+  "sin", "sobre", "entre", "hasta", "desde", "durante", "pero", "porque",
+  // English
+  "the", "an", "is", "are", "was", "were", "will", "would", "can", "could",
+  "should", "do", "does", "did", "in", "on", "at", "by", "for", "of", "to",
+  "and", "or", "not", "no", "what", "how", "when", "where", "why", "who",
+  "this", "that", "its", "our", "your", "their", "has", "have", "had",
+  "been", "be", "am", "being",
+]);
+
+/**
+ * Tokenizes a free-text query into meaningful search terms: lowercases,
+ * splits on non-word characters, drops stopwords and very short fragments.
+ * Returns [] when nothing meaningful remains (caller falls back to full-phrase
+ * search in that case).
+ */
+function tokenizeForSearch(query: string): string[] {
+  return query
+    .toLowerCase()
+    .split(/[^a-z0-9áéíóúñü]+/i)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 2 && !SEARCH_STOPWORDS.has(w));
+}
+
 function toCategory(row: {
   id: string;
   workspaceId: string;
@@ -148,23 +184,56 @@ export class PrismaKnowledgeRepository implements IKnowledgeRepository {
     if (filter.search) {
       const q = filter.search.trim();
       if (q) {
-        // Use the generated tsvector column + plainto_tsquery for proper
-        // full-text matching (tokenizes, handles multi-word queries, ranks
-        // by frequency). The 'simple' dictionary keeps this language-agnostic
-        // so both Spanish ("qué tecnología se usará?") and English work.
-        // We OR with a literal substring ILIKE on title as a recall backstop
-        // for typos / very short tokens that plainto_tsquery may miss.
-        // `searchVector` is a STORED generated column added by migration
-        // 0003_fts.sql (and scripts/fts.sql in prod); it isn't declared in
-        // the Drizzle schema because the type isn't first-class there.
-        conditions.push(
-          or(
-            sql`"KnowledgeResource"."searchVector" @@ plainto_tsquery('simple', ${q})`,
-            ilike(knowledgeResource.title, `%${q}%`),
-            sql`${knowledgeResource.tags} @> ARRAY[${q}]::text[]`,
-            sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`
-          )!
-        );
+        // Tokenize the query into meaningful words (drops stopwords + short
+        // tokens). When we have meaningful tokens, build an OR-based FTS query
+        // (word1 | word2 | …) instead of plainto_tsquery's default AND (word1
+        // & word2 & …). The AND variant fails when the user's question
+        // contains words not present in the resource (e.g. "qué", "se") — a
+        // very common case with natural-language @Alpha questions like
+        // "¿qué tecnología se usará?". OR-based matching catches any resource
+        // that mentions at least one query term, and the reciprocal-rank
+        // fusion in SearchKnowledge.hybrid handles ranking.
+        //
+        // We also add per-token ILIKE on the title as a recall backstop for
+        // typos / plurals the FTS lexemes might miss (e.g. "tecnologia" vs
+        // "tecnologias" — ILIKE %tecnologia% matches both).
+        const tokens = tokenizeForSearch(q);
+        if (tokens.length > 0) {
+          // Sanitize tokens for to_tsquery: strip characters that would be
+          // interpreted as operators (& | ! : ( ) < > ' ").
+          const safeTokens = tokens
+            .map((t) => t.replace(/[&|!():<>'"\\]/g, ""))
+            .filter(Boolean);
+          const tsqueryStr = safeTokens.join(" | ");
+          const ilikeConditions = tokens.map((t) =>
+            ilike(knowledgeResource.title, `%${t}%`)
+          );
+          const tagConditions = safeTokens.map((t) =>
+            sql`${knowledgeResource.tags} @> ARRAY[${t}]::text[]`
+          );
+          conditions.push(
+            or(
+              tsqueryStr
+                ? sql`"KnowledgeResource"."searchVector" @@ to_tsquery('simple', ${tsqueryStr})`
+                : sql`false`,
+              ...ilikeConditions,
+              ...tagConditions,
+              sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`
+            )!
+          );
+        } else {
+          // No meaningful tokens (e.g. query was all stopwords) — fall back
+          // to the original full-phrase search so single-word / short queries
+          // still work.
+          conditions.push(
+            or(
+              sql`"KnowledgeResource"."searchVector" @@ plainto_tsquery('simple', ${q})`,
+              ilike(knowledgeResource.title, `%${q}%`),
+              sql`${knowledgeResource.tags} @> ARRAY[${q}]::text[]`,
+              sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`
+            )!
+          );
+        }
       }
     }
     return and(...conditions);
