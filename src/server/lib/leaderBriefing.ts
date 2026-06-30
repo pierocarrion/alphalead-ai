@@ -339,6 +339,16 @@ export async function buildLeaderBriefing(opts: {
     data.kpi.mentionsLeader > 0 ? `${data.kpi.mentionsLeader} message(s) mentioned you.` : "No one tagged you.",
   ].filter(Boolean);
 
+  // Un proyecto sin señales negativas reales (sin tareas atrasadas, sin
+  // bloqueadores, sin miembros sobrecargados ni decisiones pendientes) está
+  // perfectamente sano. La IA a veces devuelve un riskScore>0 por "cautela"
+  // incluso sin señales, así que forzamos 0 para que la salud sea 100.
+  const hasRealRiskSignals =
+    data.kpi.overdueTasks > 0 ||
+    data.kpi.activeBlockers > 0 ||
+    data.kpi.overloadedMembers > 0 ||
+    data.kpi.pendingDecisions > 0;
+
   let risk: { riskScore: number; level: string; reasons: string[] } = {
     riskScore: 0,
     level: "low",
@@ -370,11 +380,15 @@ export async function buildLeaderBriefing(opts: {
         usedAi = true;
       }
       if (riskResp.ok && riskResp.data) {
-        risk = {
-          riskScore: Math.max(0, Math.min(100, Math.round(riskResp.data.riskScore))),
-          level: riskResp.data.level,
-          reasons: riskResp.data.reasons,
-        };
+        if (!hasRealRiskSignals) {
+          risk = { riskScore: 0, level: "low", reasons: [] };
+        } else {
+          risk = {
+            riskScore: Math.max(0, Math.min(100, Math.round(riskResp.data.riskScore))),
+            level: riskResp.data.level,
+            reasons: riskResp.data.reasons,
+          };
+        }
       }
     } catch (err) {
       log.error("AI failed, using heuristic", err);

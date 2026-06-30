@@ -460,7 +460,8 @@ Respond with JSON only:
   "reasons": ["short reason", "..."]
 }
 
-Score guidance: <30 low, 30-55 medium, 55-80 high, >80 critical.`;
+Score guidance: <30 low, 30-55 medium, 55-80 high, >80 critical.
+IMPORTANT: If there are no overdue tasks, no blockers, no overloaded members and no signals, the project is perfectly healthy: return riskScore 0, level "low" and an empty reasons array. Do not invent risk when nothing is wrong.`;
 
   return generateJSON<RiskAssessment>(prompt, {
     maxTokens: 260,
