@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "@/shared/lib/cn";
-import { Spinner } from "@/features/project-settings/presentation/components/primitives";
+import { Spinner, Modal } from "@/features/project-settings/presentation/components/primitives";
 import {
   usePhaseTracking,
   useAdvancePhase,
@@ -60,6 +60,10 @@ export function PhaseTracker({ workspaceId }: { workspaceId: string }) {
 
   const [activePhaseKey, setActivePhaseKey] = useState<string | null>(null);
   const [openArtifact, setOpenArtifact] = useState<ArtifactView | null>(null);
+  const [pendingVisibility, setPendingVisibility] = useState<{
+    artifact: ArtifactView;
+    next: boolean;
+  } | null>(null);
 
   const activePhase: PhaseView | null = useMemo(() => {
     if (phases.length === 0) return null;
@@ -291,9 +295,9 @@ export function PhaseTracker({ workspaceId }: { workspaceId: string }) {
                           type="checkbox"
                           checked={artifact.visible}
                           onChange={(e) =>
-                            toggle.mutate({
-                              artifactKey: artifact.artifactKey,
-                              body: { visible: e.target.checked },
+                            setPendingVisibility({
+                              artifact,
+                              next: e.target.checked,
                             })
                           }
                           className="h-3.5 w-3.5 accent-[var(--color-accent)]"
@@ -349,6 +353,61 @@ export function PhaseTracker({ workspaceId }: { workspaceId: string }) {
         open={!!openArtifact}
         onClose={() => setOpenArtifact(null)}
       />
+
+      <Modal
+        open={!!pendingVisibility}
+        onClose={() => setPendingVisibility(null)}
+        title={
+          pendingVisibility?.next
+            ? "Mostrar artefacto"
+            : "Ocultar artefacto"
+        }
+      >
+        {pendingVisibility && (
+          <div className="flex flex-col gap-4">
+            <p className="text-[13.5px] text-ink-2">
+              {pendingVisibility.next
+                ? `“${pendingVisibility.artifact.name}” volverá a verse en el tablero de la fase.`
+                : `Vas a ocultar “${pendingVisibility.artifact.name}”. Desaparecerá de la lista de artefactos, pero no se elimina: su contenido se conserva y puedes volver a mostrarlo con el toggle “Visible”.`}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingVisibility(null)}
+                className="rounded-xl px-3 py-2 text-[13px] font-semibold text-ink-3 hover:bg-surface-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={toggle.isPending}
+                onClick={() => {
+                  toggle.mutate(
+                    {
+                      artifactKey: pendingVisibility.artifact.artifactKey,
+                      body: { visible: pendingVisibility.next },
+                    },
+                    { onSuccess: () => setPendingVisibility(null) }
+                  );
+                }}
+                className={cn(
+                  "rounded-xl px-4 py-2 text-[13px] font-bold transition-opacity",
+                  pendingVisibility.next
+                    ? "bg-accent text-bg"
+                    : "bg-glow text-bg",
+                  toggle.isPending && "opacity-60"
+                )}
+              >
+                {toggle.isPending
+                  ? "Guardando…"
+                  : pendingVisibility.next
+                    ? "Mostrar"
+                    : "Ocultar"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
