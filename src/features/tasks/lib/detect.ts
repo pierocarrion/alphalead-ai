@@ -179,17 +179,17 @@ function extractDeadline(text: string): { due: string; deadline: Date | null } {
 
 function categoryFor(text: string): { category: string; app: string } {
   const t = text.toLowerCase();
-  if (/deck|slide|present|pitch/.test(t)) return { category: "Slides", app: "Acme Deck Hub" };
+  if (/deck|slide|present|pitch/.test(t)) return { category: "Slides", app: "Google Slides" };
   if (/report|doc|spec|write|proposal|note|summary|brief/.test(t))
-    return { category: "Docs", app: "Acme Docs" };
+    return { category: "Docs", app: "Google Docs" };
   if (/email|send|reply|message|dm|slack|write back/.test(t))
-    return { category: "Comms", app: "Mail" };
+    return { category: "Comms", app: "Gmail" };
   if (/fix|build|ship|design|code|bug|feature|deploy|test/.test(t))
-    return { category: "Build", app: "Acme Tracker" };
+    return { category: "Build", app: "Google Tasks" };
   if (/call|meeting|sync|schedule|calendar/.test(t))
-    return { category: "Meetings", app: "Calendar" };
-  if (/review|feedback|approve/.test(t)) return { category: "Review", app: "Acme Tracker" };
-  return { category: "General", app: "Knowledge base" };
+    return { category: "Meetings", app: "Google Calendar" };
+  if (/review|feedback|approve/.test(t)) return { category: "Review", app: "Google Tasks" };
+  return { category: "General", app: "Google Keep" };
 }
 
 function pick<T>(arr: T[]): T {
@@ -218,7 +218,7 @@ export function deriveTask(text: string, fromWho?: string): DetectedTaskDraft {
     load,
     micro: pick(MICRO_TEMPLATES[category] ?? MICRO_TEMPLATES.General),
     action: pick(ACTION_TEMPLATES[category] ?? ACTION_TEMPLATES.General),
-    resource: category === "Slides" ? "Untitled.key" : category === "Build" ? "Repo" : "Untitled.doc",
+    resource: category === "Slides" ? "Untitled presentation" : category === "Build" ? "Task" : "Untitled document",
     selfMade,
     confidence: looksLikeAssignment(clean) ? 0.9 : 0.75,
   };
@@ -257,10 +257,10 @@ export async function deriveTaskEnhanced(
       category: draft.category === "General" && heuristic.category !== "General"
         ? heuristic.category
         : draft.category,
-      app: draft.app === "Knowledge base" && heuristic.app !== "Knowledge base"
+      app: draft.app === "Google Keep" && heuristic.app !== "Google Keep"
         ? heuristic.app
         : draft.app,
-      resource: draft.resource === "Untitled.doc" && heuristic.resource !== "Untitled.doc"
+      resource: draft.resource === "Untitled document" && heuristic.resource !== "Untitled document"
         ? heuristic.resource
         : draft.resource,
     };
@@ -283,13 +283,13 @@ export const DECK_TASK: DetectedTaskDraft = {
   title: "Draft the Q3 launch deck",
   fromQuote: "“a first rough draft of the launch deck”",
   category: "Slides",
-  app: "Acme Deck Hub",
+  app: "Google Slides",
   due: "before Thursday",
   deadline: null,
   load: "Medium",
   micro: "Open the deck and type one messy sentence. That’s the whole job.",
   action: "one messy sentence",
-  resource: "Q3 Launch Deck.key",
+  resource: "Q3 Launch Deck",
   selfMade: false,
   confidence: 0.95,
 };

@@ -8,12 +8,12 @@ const DECK_TASK = {
   fromWho: 'daniel',
   fromQuote: '“a first rough draft of the launch deck”',
   category: 'Slides',
-  app: 'Acme Deck Hub',
+  app: 'Google Slides',
   due: 'before Thursday',
   load: 'Medium',           // estimated emotional load
   micro: 'Open the deck and type one messy sentence. That’s the whole job.',
   action: 'one messy sentence',
-  resource: 'Q3 Launch Deck.key',
+  resource: 'Q3 Launch Deck',
 };
 
 const SEED = [
@@ -48,11 +48,11 @@ function deriveTask(text) {
   if (words.length > 8) title += '…';
   // naive category guess
   const t = clean.toLowerCase();
-  let category = 'General', app = 'Knowledge base';
-  if (/deck|slide|present/.test(t)) { category = 'Slides'; app = 'Acme Deck Hub'; }
-  else if (/report|doc|spec|write|proposal/.test(t)) { category = 'Docs'; app = 'Acme Docs'; }
-  else if (/email|send|reply/.test(t)) { category = 'Comms'; app = 'Mail'; }
-  else if (/fix|build|ship|design/.test(t)) { category = 'Build'; app = 'Acme Tracker'; }
+  let category = 'General', app = 'Google Keep';
+  if (/deck|slide|present/.test(t)) { category = 'Slides'; app = 'Google Slides'; }
+  else if (/report|doc|spec|write|proposal/.test(t)) { category = 'Docs'; app = 'Google Docs'; }
+  else if (/email|send|reply/.test(t)) { category = 'Comms'; app = 'Gmail'; }
+  else if (/fix|build|ship|design/.test(t)) { category = 'Build'; app = 'Google Tasks'; }
   return {
     title,
     fromWho: 'maya',
@@ -60,7 +60,7 @@ function deriveTask(text) {
     category, app, due: 'no deadline yet', load: 'Light',
     micro: 'Open it and do the first tiny piece — one line, one click. Then you’re free to stop.',
     action: 'the first tiny piece',
-    resource: category === 'Slides' ? 'Untitled.key' : 'Untitled.doc',
+    resource: category === 'Slides' ? 'Untitled presentation' : 'Untitled document',
     selfMade: true,
   };
 }

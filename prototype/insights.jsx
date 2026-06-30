@@ -179,8 +179,8 @@ function SettingsScreen({ tone, onBack }) {
         </SettingsGroup>
 
         <SettingsGroup label="Connected apps (knowledge base)">
-          <SettingRow title="Acme Deck Hub" detail="Connected" tint="var(--sage)" chevron />
-          <SettingRow title="Acme Docs" detail="Connected" tint="var(--sage)" chevron />
+          <SettingRow title="Google Slides" detail="Connected" tint="var(--sage)" chevron />
+          <SettingRow title="Google Docs" detail="Connected" tint="var(--sage)" chevron />
           <SettingRow title="Add an app" detail="" plus last />
         </SettingsGroup>
 

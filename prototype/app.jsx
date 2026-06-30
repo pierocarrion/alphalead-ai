@@ -130,7 +130,7 @@ function App() {
             <IOSDevice dark width={402} height={874}>{phoneInner}</IOSDevice>
           ) : (
             <ChromeWindow width={1200} height={744} url="alphalead-ai.team/acme/q3-launch"
-              tabs={[{ title: 'AlphaLead — q3-launch' }, { title: 'Acme Deck Hub' }]} activeIndex={0}>
+              tabs={[{ title: 'AlphaLead — q3-launch' }, { title: 'Google Slides' }]} activeIndex={0}>
               <WebApp tone={tone} convo={convo} onShowTask={showTask} onStart={() => ritualWith(DECK_TASK)} onReplayWelcome={() => { setFlow(null); setMode('app'); setPhase('welcome'); }} />
             </ChromeWindow>
           )}

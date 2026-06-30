@@ -3,13 +3,13 @@
 const { useState: useStateWeb, useEffect: useEffectWeb, useRef: useRefWeb } = React;
 
 const BACKSTAGE = [
-  { title: 'Draft the Q3 launch deck', who: 'maya',  category: 'Slides', app: 'Acme Deck Hub', load: 'med',  stress: 2, owner: 'Maya',  status: 'In motion' },
-  { title: 'Review marketing visuals', who: 'sofia', category: 'Slides', app: 'Acme Deck Hub', load: 'low',  stress: 1, owner: 'Sofía', status: 'In motion' },
-  { title: 'Write the launch report',  who: 'maya',  category: 'Docs',   app: 'Acme Docs',     load: 'low',  stress: 1, owner: 'Maya',  status: 'New' },
-  { title: 'Update the project doc',   who: 'priya', category: 'Docs',   app: 'Acme Docs',     load: 'low',  stress: 1, owner: 'Priya', status: 'New' },
-  { title: 'Build the pricing page',   who: 'theo',  category: 'Build',  app: 'Acme Tracker',  load: 'high', stress: 3, owner: 'Theo',  status: 'Heavy' },
-  { title: 'QA the launch checklist',  who: 'theo',  category: 'Build',  app: 'Acme Tracker',  load: 'med',  stress: 2, owner: 'Theo',  status: 'Heavy' },
-  { title: 'Prep partner emails',      who: 'priya', category: 'Comms',  app: 'Mail',          load: 'low',  stress: 1, owner: 'Priya', status: 'New' },
+  { title: 'Draft the Q3 launch deck', who: 'maya',  category: 'Slides', app: 'Google Slides',   load: 'med',  stress: 2, owner: 'Maya',  status: 'In motion' },
+  { title: 'Review marketing visuals', who: 'sofia', category: 'Slides', app: 'Google Slides',   load: 'low',  stress: 1, owner: 'Sofía', status: 'In motion' },
+  { title: 'Write the launch report',  who: 'maya',  category: 'Docs',   app: 'Google Docs',     load: 'low',  stress: 1, owner: 'Maya',  status: 'New' },
+  { title: 'Update the project doc',   who: 'priya', category: 'Docs',   app: 'Google Docs',     load: 'low',  stress: 1, owner: 'Priya', status: 'New' },
+  { title: 'Build the pricing page',   who: 'theo',  category: 'Build',  app: 'Google Tasks',    load: 'high', stress: 3, owner: 'Theo',  status: 'Heavy' },
+  { title: 'QA the launch checklist',  who: 'theo',  category: 'Build',  app: 'Google Tasks',    load: 'med',  stress: 2, owner: 'Theo',  status: 'Heavy' },
+  { title: 'Prep partner emails',      who: 'priya', category: 'Comms',  app: 'Gmail',           load: 'low',  stress: 1, owner: 'Priya', status: 'New' },
 ];
 const LOAD_COLOR = { low: 'var(--sage)', med: 'var(--accent)', high: 'var(--glow)' };
 
@@ -564,8 +564,8 @@ function WebSettings({ tone, onBack }) {
         </WebSettingsGroup>
 
         <WebSettingsGroup label="Connected apps (knowledge base)">
-          <WebSettingRow title="Acme Deck Hub" detail="Connected" tint="var(--sage)" chevron />
-          <WebSettingRow title="Acme Docs" detail="Connected" tint="var(--sage)" chevron />
+          <WebSettingRow title="Google Slides" detail="Connected" tint="var(--sage)" chevron />
+          <WebSettingRow title="Google Docs" detail="Connected" tint="var(--sage)" chevron />
           <WebSettingRow title="Add an app" detail="" plus last />
         </WebSettingsGroup>
 

@@ -24,26 +24,26 @@ describe("deriveTask", () => {
   it("categorizes slide tasks", () => {
     const task = deriveTask("I need to prepare the Q3 launch deck");
     expect(task.category).toBe("Slides");
-    expect(task.app).toBe("Acme Deck Hub");
-    expect(task.resource).toBe("Untitled.key");
+    expect(task.app).toBe("Google Slides");
+    expect(task.resource).toBe("Untitled presentation");
   });
 
   it("categorizes doc tasks", () => {
     const task = deriveTask("Please write the project spec");
     expect(task.category).toBe("Docs");
-    expect(task.app).toBe("Acme Docs");
+    expect(task.app).toBe("Google Docs");
   });
 
   it("categorizes communication tasks", () => {
     const task = deriveTask("Send the update email to the team");
     expect(task.category).toBe("Comms");
-    expect(task.app).toBe("Mail");
+    expect(task.app).toBe("Gmail");
   });
 
   it("categorizes build tasks", () => {
     const task = deriveTask("Fix the navigation bug before release");
     expect(task.category).toBe("Build");
-    expect(task.app).toBe("Acme Tracker");
+    expect(task.app).toBe("Google Tasks");
   });
 
   it("truncates long titles", () => {

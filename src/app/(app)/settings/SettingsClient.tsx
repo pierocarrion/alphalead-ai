@@ -66,7 +66,7 @@ export function SettingsClient({
             <GoogleCalendarConnect initialConnected={googleConnected} />
           </div>
           <SettingRow
-            title="Acme Deck Hub"
+            title="Google Slides"
             detail="Conectado"
             tint="var(--color-sage)"
             chevron
