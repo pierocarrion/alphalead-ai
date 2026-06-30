@@ -7,6 +7,7 @@ export interface MentionCandidate {
   name: string;
   personId: string;
   isBot?: boolean;
+  role?: string;
 }
 
 interface MentionSuggestionsProps {
@@ -49,7 +50,11 @@ export function MentionSuggestions({
           <Avatar who={c.personId} size={28} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-ink">{c.name}</div>
-            {c.isBot && <div className="text-[11px] text-ink-3">Assistant</div>}
+            {c.isBot ? (
+              <div className="text-[11px] text-ink-3">Assistant</div>
+            ) : c.role ? (
+              <div className="text-[11px] text-ink-3">{c.role}</div>
+            ) : null}
           </div>
         </button>
       ))}

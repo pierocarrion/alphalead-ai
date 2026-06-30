@@ -72,10 +72,11 @@ export function ChatClient({
       id: m.id,
       name: m.name || "Unknown",
       personId: m.personId,
+      role: t(locale, `admin.role.${m.role}`),
     }));
     list.push({ id: "alpha", name: "Alpha", personId: "alpha", isBot: true });
     return list;
-  }, [members]);
+  }, [members, locale]);
 
   const filteredCandidates = useMemo(() => {
     const q = mention.query.trim().toLowerCase();
