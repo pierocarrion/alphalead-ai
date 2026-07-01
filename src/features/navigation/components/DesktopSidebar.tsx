@@ -347,31 +347,33 @@ export function DesktopSidebar({
       </div>
 
       {/* User footer (clickable profile) */}
-      <div className="flex flex-col gap-1.5 border-t border-line px-2.5 py-2.5">
-        <div className="flex items-center gap-2.5">
-          <Link
-            href={`/profile/${currentUserId}`}
-            className="flex flex-1 items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-white/[0.03]"
-          >
-            <Avatar who={selfPersonId} size={30} />
-            <div className="flex-1 min-w-0">
-              <div className="truncate text-[13.5px] font-bold text-ink">
-                {userName || "you"}
-              </div>
-              <div className="text-[11px] text-ink-3">{roleLabel}</div>
+      <div className="flex flex-col gap-2 border-t border-line px-2.5 py-2.5">
+        <Link
+          href={`/profile/${currentUserId}`}
+          className="flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-white/[0.03]"
+        >
+          <Avatar who={selfPersonId} size={30} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] font-bold text-ink">
+              {userName || "you"}
             </div>
-          </Link>
+            <div className="text-[11px] text-ink-3">{roleLabel}</div>
+          </div>
+        </Link>
+        <div className="flex items-center justify-between gap-2">
           <LanguageToggle className="shrink-0" />
-          <NotificationCenter />
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            aria-label={tr("nav.logout")}
-            title={tr("nav.logout")}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-3 transition-colors hover:bg-white/[0.05] hover:text-ink"
-          >
-            <Icon name="logout" size={17} color="currentColor" />
-          </button>
+          <div className="flex items-center gap-1">
+            <NotificationCenter />
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              aria-label={tr("nav.logout")}
+              title={tr("nav.logout")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-3 transition-colors hover:bg-white/[0.05] hover:text-ink"
+            >
+              <Icon name="logout" size={17} color="currentColor" />
+            </button>
+          </div>
         </div>
       </div>
     </aside>

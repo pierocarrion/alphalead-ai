@@ -119,7 +119,7 @@ export function NotificationCenter() {
       </button>
 
       {open && (
-        <div className="absolute bottom-10 right-0 z-50 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+        <div className="absolute bottom-10 left-0 z-50 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <span className="text-[13px] font-bold text-ink">
               {t(locale, "notif.title")}
