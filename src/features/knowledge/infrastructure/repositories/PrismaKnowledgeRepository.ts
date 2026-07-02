@@ -32,6 +32,49 @@ import type {
   KnowledgeResourceWithRelations,
   KnowledgeSuggestion,
 } from "../../domain/entities/KnowledgeResource";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("knowledgeRepo");
+
+/**
+ * Whether the generated `searchVector` tsvector column (scripts/fts.sql) is
+ * available on KnowledgeResource.
+ *   null  = unknown — assume available and include the FTS clause.
+ *   false = confirmed missing/unusable — skip FTS and rely on ILIKE only.
+ *
+ * Latched to false on the first query that fails because the column doesn't
+ * exist, so we pay the retry cost exactly once per process instead of on every
+ * search. Never latched back to true: a column can't appear without a redeploy,
+ * and a redeploy resets module state. This is what keeps keyword retrieval
+ * (and therefore @Alpha grounding) working when the FTS migration hasn't been
+ * applied to the live DB — previously a missing column made the whole OR query
+ * throw, silently zeroing the knowledge base for every reply.
+ */
+let ftsAvailable: boolean | null = null;
+
+/**
+ * Detects a "column does not exist" failure for the `searchVector` column.
+ * Drizzle/pg surface the real PostgreSQL error (SQLSTATE 42703) on
+ * `Error.cause`, and the message references the column by name, so we check
+ * both layers (see serializeError in the logger for the same cause-chain walk).
+ */
+function isMissingSearchVectorError(err: unknown): boolean {
+  const candidates: unknown[] = [err];
+  const seen = new Set<unknown>();
+  while (candidates.length) {
+    const node = candidates.shift();
+    if (!node || typeof node !== "object" || seen.has(node)) continue;
+    seen.add(node);
+    const e = node as { code?: unknown; message?: unknown; column?: unknown };
+    if (e.code === "42703") return true;
+    const msg = typeof e.message === "string" ? e.message : "";
+    if (/searchVector/i.test(msg)) return true;
+    if (typeof e.column === "string" && /searchVector/i.test(e.column)) return true;
+    const cause = (node as { cause?: unknown }).cause;
+    if (cause && typeof cause === "object") candidates.push(cause);
+  }
+  return false;
+}
 
 /**
  * Common Spanish + English stopwords excluded from search tokenization so
@@ -193,59 +236,97 @@ export class PrismaKnowledgeRepository implements IKnowledgeRepository {
         // "¿qué tecnología se usará?". OR-based matching catches any resource
         // that mentions at least one query term, and the reciprocal-rank
         // fusion in SearchKnowledge.hybrid handles ranking.
-        //
-        // We also add per-token ILIKE on the title as a recall backstop for
-        // typos / plurals the FTS lexemes might miss (e.g. "tecnologia" vs
-        // "tecnologias" — ILIKE %tecnologia% matches both).
         const tokens = tokenizeForSearch(q);
-        if (tokens.length > 0) {
-          // Sanitize tokens for to_tsquery: strip characters that would be
-          // interpreted as operators (& | ! : ( ) < > ' ").
-          const safeTokens = tokens
-            .map((t) => t.replace(/[&|!():<>'"\\]/g, ""))
-            .filter(Boolean);
-          const tsqueryStr = safeTokens.join(" | ");
-          const ilikeConditions = tokens.map((t) =>
-            ilike(knowledgeResource.title, `%${t}%`)
-          );
-          const tagConditions = safeTokens.map((t) =>
-            sql`${knowledgeResource.tags} @> ARRAY[${t}]::text[]`
-          );
-          conditions.push(
-            or(
-              tsqueryStr
-                ? sql`"searchVector" @@ to_tsquery('simple', ${tsqueryStr})`
-                : sql`false`,
-              ...ilikeConditions,
-              ...tagConditions,
-              sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`
-            )!
-          );
+
+        // ALWAYS-SAFE predicates (no dependency on the generated `searchVector`
+        // column): per-token ILIKE across title/summary/contentText + tag/keyword
+        // array containment. These guarantee keyword search keeps working even
+        // if the FTS migration (scripts/fts.sql) hasn't been applied — before,
+        // a missing column made the whole OR query throw and silently zeroed
+        // the knowledge base for every @Alpha reply. ILIKE over contentText is a
+        // sequential scan, acceptable at per-workspace Knowledge Hub scale; the
+        // GIN-backed FTS clause below is the ranking accelerator when present.
+        const buildSafeConditions = (): SQL[] => {
+          if (tokens.length > 0) {
+            const safeTokens = tokens
+              .map((t) => t.replace(/[&|!():<>'"\\]/g, ""))
+              .filter(Boolean);
+            return [
+              ...tokens.map((t) => ilike(knowledgeResource.title, `%${t}%`)),
+              ...tokens.map((t) => ilike(knowledgeResource.summary, `%${t}%`)),
+              ...tokens.map((t) => ilike(knowledgeResource.contentText, `%${t}%`)),
+              ...safeTokens.map((t) =>
+                sql`${knowledgeResource.tags} @> ARRAY[${t}]::text[]`
+              ),
+              sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`,
+            ];
+          }
+          // No meaningful tokens (e.g. query was all stopwords) — use the
+          // full phrase so single-word / short queries still work.
+          return [
+            ilike(knowledgeResource.title, `%${q}%`),
+            ilike(knowledgeResource.summary, `%${q}%`),
+            ilike(knowledgeResource.contentText, `%${q}%`),
+            sql`${knowledgeResource.tags} @> ARRAY[${q}]::text[]`,
+            sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`,
+          ];
+        };
+
+        const safeConditions = buildSafeConditions();
+
+        // The GIN-backed FTS clause is a recall/ranking accelerator only. It is
+        // included solely when `searchVector` is known to be available; if a
+        // query ever fails because the column is missing, `withFtsGuard` (in
+        // list/count) latches `ftsAvailable` to false and we retry using only
+        // the safe ILIKE conditions above.
+        if (ftsAvailable !== false) {
+          const ftsClause =
+            tokens.length > 0
+              ? sql`"searchVector" @@ to_tsquery('simple', ${tokens
+                  .map((t) => t.replace(/[&|!():<>'"\\]/g, ""))
+                  .filter(Boolean)
+                  .join(" | ")})`
+              : sql`"searchVector" @@ plainto_tsquery('simple', ${q})`;
+          conditions.push(or(ftsClause, ...safeConditions)!);
         } else {
-          // No meaningful tokens (e.g. query was all stopwords) — fall back
-          // to the original full-phrase search so single-word / short queries
-          // still work.
-          conditions.push(
-            or(
-              sql`"searchVector" @@ plainto_tsquery('simple', ${q})`,
-              ilike(knowledgeResource.title, `%${q}%`),
-              sql`${knowledgeResource.tags} @> ARRAY[${q}]::text[]`,
-              sql`${knowledgeResource.keywords} @> ARRAY[${q}]::text[]`
-            )!
-          );
+          conditions.push(or(...safeConditions)!);
         }
       }
     }
     return and(...conditions);
   }
 
+  /**
+   * Runs a read query with a one-time FTS fallback. If the query references the
+   * generated `searchVector` column and the DB rejects it (migration not
+   * applied), latch `ftsAvailable` to false and re-run — `buildWhere` then
+   * rebuilds the predicate without the FTS clause so the retry succeeds via
+   * ILIKE. Subsequent calls skip FTS entirely. Any other error rethrows.
+   */
+  private async withFtsGuard<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (err) {
+      if (ftsAvailable !== false && isMissingSearchVectorError(err)) {
+        ftsAvailable = false;
+        log.warn(
+          "searchVector column unavailable — falling back to ILIKE-only keyword search"
+        );
+        return run();
+      }
+      throw err;
+    }
+  }
+
   async list(filter: ListResourcesFilter): Promise<KnowledgeResourceWithRelations[]> {
-    const rows = await db.query.knowledgeResource.findMany({
-      where: this.buildWhere(filter),
-      orderBy: desc(knowledgeResource.updatedAt),
-      limit: filter.limit ?? 50,
-      offset: filter.offset ?? 0,
-    });
+    const rows = await this.withFtsGuard(() =>
+      db.query.knowledgeResource.findMany({
+        where: this.buildWhere(filter),
+        orderBy: desc(knowledgeResource.updatedAt),
+        limit: filter.limit ?? 50,
+        offset: filter.offset ?? 0,
+      })
+    );
     const categoryIds = [
       ...new Set(
         rows
@@ -269,6 +350,15 @@ export class PrismaKnowledgeRepository implements IKnowledgeRepository {
       )
     );
     const countMap = new Map(countRows);
+    if (filter.search) {
+      log.debug("keyword search executed", {
+        workspaceId: filter.workspaceId,
+        query: filter.search,
+        ftsUsed: ftsAvailable !== false,
+        matched: rows.length,
+        titles: rows.map((r) => r.title),
+      });
+    }
     return rows.map((row) => {
       const category =
         row.categoryId && categoryMap.has(row.categoryId)
@@ -283,11 +373,13 @@ export class PrismaKnowledgeRepository implements IKnowledgeRepository {
   }
 
   async count(filter: ListResourcesFilter): Promise<number> {
-    const rows = await db
-      .select({ c: count() })
-      .from(knowledgeResource)
-      .where(this.buildWhere(filter));
-    return rows[0]?.c ?? 0;
+    return this.withFtsGuard(async () => {
+      const rows = await db
+        .select({ c: count() })
+        .from(knowledgeResource)
+        .where(this.buildWhere(filter));
+      return rows[0]?.c ?? 0;
+    });
   }
 
   async create(input: CreateResourceInput): Promise<KnowledgeResource> {

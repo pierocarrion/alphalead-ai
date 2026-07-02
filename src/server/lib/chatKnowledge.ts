@@ -47,6 +47,7 @@ export async function generateAlphaChannelReply(args: {
   // whose title/content don't contain that word.
   const ragQuery = stripAlphaMention(args.messageText) || args.messageText;
   let knowledge: Array<{ title: string; content: string }> = [];
+  let retrievalError: unknown = null;
   try {
     const search = knowledgeContainer.searchKnowledge();
     const ranked = await search.hybrid({
@@ -61,7 +62,32 @@ export async function generateAlphaChannelReply(args: {
         content: r.snippet || r.resource.summary || "",
       }));
   } catch (err) {
-    log.error("knowledgeHub hybrid (reply) failed", err);
+    retrievalError = err;
+    log.error("knowledgeHub hybrid (reply) failed", {
+      workspaceId: args.workspaceId,
+      query: ragQuery,
+      error: err,
+    });
+  }
+  // Distinguish "found nothing" from "retrieval blew up" so the empty-knowledge
+  // replies Alpha inevitably produces are diagnosable in Cloud Logging instead
+  // of looking identical to a genuinely empty Knowledge Hub.
+  if (knowledge.length === 0) {
+    log.warn("Alpha reply grounded on empty knowledge", {
+      workspaceId: args.workspaceId,
+      query: ragQuery,
+      hadRetrievalError: retrievalError !== null,
+    });
+  } else {
+    log.debug("grounding Alpha reply", {
+      workspaceId: args.workspaceId,
+      rawMessage: args.messageText,
+      ragQuery,
+      groundedOn: knowledge.map((k) => ({
+        title: k.title,
+        contentChars: k.content.length,
+      })),
+    });
   }
 
   let projectContext: {

@@ -91,7 +91,25 @@ export class IngestDocument {
       upserted += records.length;
     }
 
-    return { resourceId: resource.id, chunks: persistedChunks.length, vectors: upserted, enriched };
+    const outcome = { resourceId: resource.id, chunks: persistedChunks.length, vectors: upserted, enriched };
+    if (upserted === 0) {
+      log.warn("ingest produced no vectors (resource will not be semantically retrievable)", {
+        resourceId: resource.id,
+        title: resource.title,
+        chunks: persistedChunks.length,
+        workspaceId: resource.workspaceId,
+      });
+    } else {
+      log.debug("ingest complete", {
+        resourceId: resource.id,
+        title: resource.title,
+        workspaceId: resource.workspaceId,
+        chunks: outcome.chunks,
+        vectors: outcome.vectors,
+        enriched: outcome.enriched,
+      });
+    }
+    return outcome;
   }
 
   private async enrichResource(resource: KnowledgeResource): Promise<boolean> {

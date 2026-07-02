@@ -1,7 +1,11 @@
 import type { IKnowledgeRepository, SemanticSearchHit, SemanticSearchResult } from "../../domain/repositories/IKnowledgeRepository";
+import type { KnowledgeResourceWithRelations } from "../../domain/entities/KnowledgeResource";
 import { getVectorStore } from "@/server/lib/ai/vectorStore";
 import { buildSnippet } from "../lib/chunking";
 import type { AiClient } from "@/server/lib/ai/client";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("searchKnowledge");
 
 export interface SearchKnowledgeInput {
   workspaceId: string;
@@ -43,6 +47,12 @@ export class SearchKnowledge {
     const topK = input.topK ?? 6;
     const embed = await this.ai.embedder.embed([input.query]);
     if (!embed.ok || !embed.data?.[0]) {
+      log.warn("semantic arm: embedder returned no vector", {
+        query: input.query,
+        ok: embed.ok,
+        error: embed.error,
+        provider: embed.provider,
+      });
       return { query: input.query, hits: [] };
     }
     const results = await getVectorStore().query(embed.data[0], {
@@ -61,11 +71,38 @@ export class SearchKnowledge {
         snippet: buildSnippet(chunk.text),
       });
     }
+    log.debug("semantic arm result", {
+      query: input.query,
+      workspaceId: input.workspaceId,
+      topK,
+      vectorCandidates: results.length,
+      resolvedHits: hits.length,
+      top: hits.slice(0, 3).map((h) => ({
+        resourceId: h.resourceId,
+        score: Number(h.score.toFixed(4)),
+      })),
+    });
     return { query: input.query, hits };
   }
 
   async hybrid(input: SearchKnowledgeInput): Promise<RankedResult[]> {
-    const [semanticHits, keywordItems] = await Promise.all([
+    // Run the two retrieval arms concurrently but independently: a failure in
+    // one (e.g. the keyword arm throwing because the embedder is misconfigured,
+    // or the vector store rejecting a query) must NOT discard the other's
+    // results. Promise.allSettled keeps whatever succeeded and surfaces the
+    // failure to the logs instead of rejecting the whole reply — which is what
+    // previously made @Alpha answer as if the knowledge base were empty.
+    const semanticWeight = input.semanticWeight ?? 0.6;
+    log.debug("hybrid retrieval plan", {
+      workspaceId: input.workspaceId,
+      query: input.query,
+      topK: input.topK ?? 8,
+      semanticWeight,
+      keywordWeight: 1 - semanticWeight,
+      filters: input.filters ?? null,
+    });
+
+    const [semanticRes, keywordRes] = await Promise.allSettled([
       this.semantic(input),
       this.repo.list({
         workspaceId: input.workspaceId,
@@ -76,10 +113,29 @@ export class SearchKnowledge {
       }),
     ]);
 
+    const semanticHits: SemanticSearchResult =
+      semanticRes.status === "fulfilled"
+        ? semanticRes.value
+        : { query: input.query, hits: [] };
+    if (semanticRes.status === "rejected") {
+      log.error("semantic RAG arm rejected", semanticRes.reason);
+    }
+
+    const keywordItems: KnowledgeResourceWithRelations[] =
+      keywordRes.status === "fulfilled" ? keywordRes.value : [];
+    if (keywordRes.status === "rejected") {
+      log.error("keyword RAG arm rejected", keywordRes.reason);
+    }
+    log.debug("hybrid arm inputs", {
+      query: input.query,
+      semanticHitCount: semanticHits.hits.length,
+      keywordHitCount: keywordItems.length,
+      keywordTitles: keywordItems.map((k) => k.title),
+    });
+
     // Reciprocal Rank Fusion (k=60) — robust to different score scales.
     const K = 60;
     const fusion = new Map<string, { score: number; snippet: string }>();
-    const semanticWeight = input.semanticWeight ?? 0.6;
     const keywordWeight = 1 - semanticWeight;
 
     semanticHits.hits.forEach((hit, rank) => {
@@ -110,7 +166,7 @@ export class SearchKnowledge {
       }
     }
 
-    return topIds.map((id) => {
+    const ranked = topIds.map((id) => {
       const resource = resourceMap.get(id);
       const meta = fusion.get(id)!;
       const source: RankedResult["source"] =
@@ -144,5 +200,18 @@ export class SearchKnowledge {
         source,
       };
     });
+
+    log.debug("hybrid final ranking", {
+      query: input.query,
+      workspaceId: input.workspaceId,
+      resultCount: ranked.length,
+      ranking: ranked.map((r) => ({
+        title: r.resource.title,
+        source: r.source,
+        score: Number(r.score.toFixed(4)),
+      })),
+    });
+
+    return ranked;
   }
 }
